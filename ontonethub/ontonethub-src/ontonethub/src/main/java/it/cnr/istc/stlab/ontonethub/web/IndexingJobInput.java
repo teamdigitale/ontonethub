@@ -1,0 +1,59 @@
+package it.cnr.istc.stlab.ontonethub.web;
+
+import com.hp.hpl.jena.rdf.model.Model;
+
+/**
+ * The IndexingJobInput represents the input for an IndexingJob.
+ * 
+ * @author Andrea Nuzzolese
+ *
+ */
+public class IndexingJobInput {
+
+	private String name, description, baseURI;
+	private Model data;
+	
+	public IndexingJobInput() {
+		
+	}
+	
+	public IndexingJobInput(String name, String description, String baseURI, Model data) {
+		this.name = name;
+		this.description = description;
+		this.baseURI = baseURI;
+		this.data = data;
+	}
+
+	public String getName() {
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = name;
+	}
+	
+	public String getDescription() {
+		return description;
+	}
+	
+	public void setDescription(String description) {
+		this.description = description;
+	}
+	
+	public String getBaseURI() {
+		return baseURI;
+	}
+	
+	public void setBaseURI(String baseURI) {
+		this.baseURI = baseURI;
+	}
+	
+	public Model getData() {
+		return data;
+	}
+	
+	public void setData(Model data) {
+		this.data = data;
+	}
+	
+}

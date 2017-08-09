@@ -1,0 +1,550 @@
+{
+  "swagger" : "2.0",
+  "info" : {
+    "description" : "HTTP Rest services for accessing the entities defined in the ontology network.",
+    "version" : "0.1",
+    "title" : "OntoNetHub",
+    "contact" : {
+      "name" : "andrea.nuzzolese@istc.cnr.it"
+    },
+    "license" : {
+      "name" : "Apache 2.0",
+      "url" : "http://www.apache.org/licenses/LICENSE-2.0.html"
+    }
+  },
+  "host" : "localhost:8000",
+  "basePath" : "/",
+  "tags" : [ {
+      "name" : "find"
+    },
+    {
+      "name" : "ontology catalogue"
+    }
+  ],
+  "schemes" : [ "http" ],
+  "paths" : {
+    "/stanbol/ontonethub/ontologies" : {
+      "get" : {
+        "tags" : [ "info", "ontology catalogue", "/ontonethub/ontologies" ],
+        "summary" : "Returns the list of ontologies indexed by the OntoNet Hub.",
+        "operationId" : "list",
+        "produces" : ["application/json"],
+        "responses" : {
+          "200" : {
+            "description" : "The list of the indexes for the ontologies. The list is provided as a JSON array.",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stanbol/ontonethub/ontology" : {
+      "post" : {
+        "consumes" : ["multipart/form-data"],
+        "tags" : [ "Add", "/ontonethub/ontology"],
+        "summary" : "Add an ontology for OntoNet management.",
+        "description" : "",
+        "operationId" : "add",
+        "produces" : [ "application/json"],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "formData",
+          "description" : "The name of the ontology.",
+          "required" : true,
+          "type" : "string"
+          }, 
+          {"name" : "description",
+          "in" : "formData",
+          "description" : "A textual description of the ontology.",
+          "required" : true,
+          "type" : "string"
+          },
+          {"name" : "baseURI",
+          "in" : "formData",
+          "description" : "The URI associated in the Web with the ontology being added.",
+          "required" : true,
+          "type" : "string"
+          },
+          {"name" : "data",
+          "in" : "formData",
+          "description" : "The OWL ontology to add.",
+          "required" : true,
+          "type" : "file"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "Ontology succesfully added. The URL of the job that is performing the indexing is returned in the JSON provided as output.",
+            "schema" : {
+              "$ref" : "#/definitions/JobLink"
+            }
+          },
+          "409" : {
+            "description" : "The ontology cannot be added as it already exists in the OntoNetHub.",
+          }
+        }
+      }
+    },
+    "/stanbol/ontonethub/ontology/{id}" : {
+      "get" : {
+        "consumes" : ["*/*"],
+        "tags" : [ "info", "/ontonethub/ontology"],
+        "summary" : "Return the information associated with the ontology idendified by the ID.",
+        "description" : "",
+        "operationId" : "OntologyInfo",
+        "produces" : [ "application/json"],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The ID of the ontology that is object of the information seeking.",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "The ontology exists and the information is returned as JSON.",
+            "schema" : {
+              "$ref" : "#/definitions/OntologyInfo"
+            }
+          },
+          "404" : {
+            "description" : "The ontology cannot be fount in OntoNetHub.",
+            "schema" : {
+              "$ref" : "#/definitions/Error"
+            }
+          },
+          "500" : {
+            "description" : "An error occurred when retrieving the information associated with the ontology. The description of the error is returned in the body of the response.",
+            "schema" : {
+              "$ref" : "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete" : {
+        "consumes" : ["*/*"],
+        "tags" : [ "delete", "/ontonethub/ontology"],
+        "summary" : "Delete from the OntoNetHub the ontology idendified by the ID.",
+        "description" : "",
+        "operationId" : "OntologyDelete",
+        "produces" : [ "application/json"],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The ID of the ontology to delete.",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "The ontology has been deleted.",
+            "schema" : {
+              "$ref" : "#/definitions/OntologyInfo"
+            }
+          },
+          "404" : {
+            "description" : "The ontology cannot be fount in OntoNetHub.",
+            "schema" : {
+              "$ref" : "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/stanbol/ontonethub/ontology/{id}/source" : {
+      "get" : {
+        "consumes" : ["*/*"],
+        "tags" : [ "ontology source", "/ontonethub/ontology"],
+        "summary" : "Return the OWL surce of an ontology managed by the OntoNetHub.",
+        "description" : "",
+        "operationId" : "OntologySource",
+        "produces" : [ 
+          "application/rdf+xml", 
+          "text/turtle", 
+          "text/rdf+n3",
+          "application/rdf+json",
+          "application/json-ld"],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The ID of the ontology that is object of the information seeking.",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "The OWL source is returned as output by using the requested notation as syntax."
+          },
+          "404" : {
+            "description" : "The ontology cannot be fount in OntoNetHub.",
+            "schema" : {
+              "$ref" : "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/stanbol/jobs/{id}" : {
+      "get" : {
+        "consumes" : ["*/*"],
+        "tags" : [ "processing jobs", "/jobs", "info"],
+        "summary" : "Return the status information of a job (identified by the specific ID provided as input).",
+        "description" : "",
+        "operationId" : "JobStatus",
+        "produces" : [ 
+          "application/json",
+          "text/html", 
+          ],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The ID of the ontology that proceced by the OntoNetHub for processing (i.e. indexing and storage).",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "The indexing job started. The information about the status of the job cab be retrieved by accessing the output location provided as output.",
+            "schema" : {
+              "$ref" : "#/definitions/Job"
+            }
+          },
+          "404" : {
+            "description" : "The job does not exist."
+          }
+        }
+      },
+      "delete" : {
+        "consumes" : ["*/*"],
+        "tags" : [ "processing jobs", "/jobs", "delete"],
+        "summary" : "Delete a job. Jobs can be deleted when they are in the status 'finished'.",
+        "description" : "",
+        "operationId" : "JobDelete",
+        "produces" : [ ],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The ID of the ontology that proceced by the OntoNetHub for processing (i.e. indexing and storage).",
+            "required" : true,
+            "type" : "string"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "The indexing job has been deleted.",
+            "schema" : {
+              "$ref" : "#/definitions/Job"
+            }
+          },
+          "404" : {
+            "description" : "The job does not exist."
+          }
+        }
+      }
+    },
+    "/stanbol/ontonethub/ontologies/find" : {
+      "post" : {
+        "consumes" : ["application/x-www-form-urlencoded"],
+        "tags" : [ "find" ],
+        "summary" : "Find the entities of the ontology network that match a specific query string.",
+        "description" : "",
+        "operationId" : "FindOnts",
+        "produces" : [ "application/json", 
+          "application/rdf+xml", 
+          "text/turtle", 
+          "application/x-turtle", 
+          "text/rdf+nt", 
+          "text/rdf+n3", 
+          "application/rdf+json"],
+        "parameters" : [ {
+          "name" : "name",
+          "in" : "formData",
+          "description" : "The name of the entity (supports wildcards e.g. \"Accu*\" for \"Accuracy\")",
+          "required" : true,
+          "type" : "string"
+          }, 
+          {"name" : "field",
+          "in" : "formData",
+          "description" : "The name of the field used for the query. One MUST parse the full name. Namespace prefixes are not supported yet. (default is rdfs:label)",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "lang",
+          "in" : "formData",
+          "description" : "The language of the parsed name can be defined",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "ldpath",
+          "in" : "formData",
+          "description" : "LDPath (http://marmotta.apache.org/ldpath/language.html) programs can be used to specify what information to return for Entities selected by the /find request",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "limit",
+          "in" : "formData",
+          "description" : "The maximum number of results",
+          "required" : false,
+          "type" : "integer"
+          },
+          {"name" : "offset",
+          "in" : "formData",
+          "description" : "The offset of first result",
+          "required" : false,
+          "type" : "integer"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "successful operation",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/definitions/ResultSet"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stanbol/ontonethub/ontology/{id}/find" : {
+      "post" : {
+        "consumes" : ["application/x-www-form-urlencoded"],
+        "tags" : [ "find", "/ontonethub/ontology"],
+        "summary" : "Find the entities of the ontology network that match a specific query string.",
+        "description" : "",
+        "operationId" : "FindOnt",
+        "produces" : [ "application/json", 
+          "application/rdf+xml", 
+          "text/turtle", 
+          "application/x-turtle", 
+          "text/rdf+nt", 
+          "text/rdf+n3", 
+          "application/rdf+json"],
+        "parameters" : [ 
+          {
+            "name" : "id",
+            "in" : "path",
+            "description" : "The id of the ontology to query on.",
+            "required" : true,
+            "type" : "string"
+          },
+          {
+          "name" : "name",
+          "in" : "formData",
+          "description" : "The name of the entity (supports wildcards e.g. \"Accu*\" for \"Accuracy\")",
+          "required" : true,
+          "type" : "string"
+          }, 
+          {"name" : "field",
+          "in" : "formData",
+          "description" : "The name of the field used for the query. One MUST parse the full name. Namespace prefixes are not supported yet. (default is rdfs:label)",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "lang",
+          "in" : "formData",
+          "description" : "The language of the parsed name can be defined",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "ldpath",
+          "in" : "formData",
+          "description" : "LDPath (http://marmotta.apache.org/ldpath/language.html) programs can be used to specify what information to return for Entities selected by the /find request",
+          "required" : false,
+          "type" : "string"
+          },
+          {"name" : "limit",
+          "in" : "formData",
+          "description" : "The maximum number of results",
+          "required" : false,
+          "type" : "integer"
+          },
+          {"name" : "offset",
+          "in" : "formData",
+          "description" : "The offset of first result",
+          "required" : false,
+          "type" : "integer"
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful operation",
+            "schema" : {
+              "type" : "array",
+              "items" : {
+                "$ref" : "#/definitions/ResultSet"
+              }
+            }
+          },
+          "404" : {
+            "description" : "The ontology with the specified ID does not exist.",
+          }
+        }
+      }
+    }
+  },
+  "definitions" : {
+    "ResultSet" : {
+      "type" : "object",
+      "properties" : {
+        "query" : {
+          "type" : "object",
+          "properties" : {
+            "selected" : {
+              "type" : "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "constraints" : {
+              "type" : "array",
+              "items": {
+                "$ref": "#/definitions/Constraint"
+              }
+            },
+            "limit" : {
+              "type" : "integer"
+            },
+            "offset" : {
+              "type" : "integer"
+            }
+          }
+        },
+        "results" : {
+          "type" : "array",
+          "items": {
+                "$ref": "#/definitions/Result"
+          }
+        }
+      }
+    },
+    "Constraint" : {
+      "type" : "object",
+      "properties" : {
+        "type" : {
+          "type" : "string"
+        },
+        "patternType" : {
+          "type" : "string"
+        },
+        "text" : {
+          "type" : "string"
+        },
+        "proximityRanking" : {
+          "type" : "boolean"
+        },
+        "field" : {
+          "type" : "string"
+        },
+        "boost" : {
+          "type" : "integer"
+        }
+      }
+    },
+    "Result" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "constraint" : {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties" : {
+             "type" : {
+                "type" : "string"
+              },
+              "xml:lang" : {
+                "type" : "string"
+              },
+              "value" : {
+                "type" : "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "JobLink" : {
+      "type" : "object",
+      "properties" : {
+        "monitoringService" : {
+          "type" : "string"
+        }
+      }
+    },
+    "Job" : {
+      "type" : "object",
+      "properties" : {
+        "status" : {
+          "type" : "string"
+        },
+        "outputLocation" : {
+          "type" : "string"
+        },
+        "messages" : {
+          "type" : "array",
+          "items" : {
+            "type" : "string"
+          }
+            
+        }
+      }
+    },
+    "OntologyInfo" : {
+      "type" : "object",
+      "properties" : {
+        "id" : {
+          "type" : "string"
+        },
+        "ontologySource" : {
+          "type" : "string"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "ontologyIRI" : {
+          "type" : "string"
+        },
+        "owlClasses" : {
+          "type" : "integer"
+        },
+        "objectProperties" : {
+          "type" : "integer"
+        },
+        "datatypeProperties" : {
+          "type" : "integer"
+        },
+        "annotationProperties" : {
+          "type" : "integer"
+        },
+        "importedOntologies" : {
+          "type" : "integer"
+        }
+      }
+    },
+    "Error" : {
+      "type" : "object",
+      "properties" : {
+        "error" : {
+          "type" : "string"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+org.apache.stanbol.commons.namespaceprefix.provider.stanbol.DefaultNamespaceMappingsProvider
+org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.PrefixccProvider
