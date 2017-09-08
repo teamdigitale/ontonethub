@@ -1,0 +1,33 @@
+// ------------------------------------------------------------------
+// Transitive dependencies of this project determined from the
+// maven pom organized by organization.
+// ------------------------------------------------------------------
+
+Apache Stanbol Commons prefix.cc based Namespace Prefix Provider
+
+
+From: 'OSGi Alliance' (http://www.osgi.org)
+  - osgi.cmpn (http://www.osgi.org) org.osgi:org.osgi.compendium:jar:4.3.1
+    License: Apache License, Version 2.0  (http://opensource.org/licenses/apache2.0.php)
+  - osgi.core (http://www.osgi.org) org.osgi:org.osgi.core:jar:4.3.1
+    License: Apache License, Version 2.0  (http://opensource.org/licenses/apache2.0.php)
+
+From: 'QOS.ch' (http://www.qos.ch)
+  - SLF4J API Module (http://www.slf4j.org) org.slf4j:slf4j-api:jar:1.7.12
+    License: MIT License  (http://www.opensource.org/licenses/mit-license.php)
+
+From: 'The Apache Software Foundation' (http://www.apache.org/)
+  - Commons IO (http://commons.apache.org/io/) commons-io:commons-io:jar:2.4
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Annotations for SCR (http://felix.apache.org/org.apache.felix.scr.annotations/) org.apache.felix:org.apache.felix.scr.annotations:jar:1.9.12
+    License: The Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+From: 'The Apache Software Foundation' (https://www.apache.org/)
+  - Apache Stanbol Commons Namespace Prefix Service (https://www.apache.org/stanbol-parent/org.apache.stanbol.commons.namespaceprefix.service/) org.apache.stanbol:org.apache.stanbol.commons.namespaceprefix.service:bundle:1.0.0
+    License: Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+  - Apache Stanbol Commons Offline Utilities (https://www.apache.org/stanbol-parent/org.apache.stanbol.commons.stanboltools.offline/) org.apache.stanbol:org.apache.stanbol.commons.stanboltools.offline:bundle:1.0.0
+    License: Apache Software License, Version 2.0  (http://www.apache.org/licenses/LICENSE-2.0.txt)
+
+
+
+

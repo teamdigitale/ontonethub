@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent" activate="activate" deactivate="deactivate">
+    <implementation class="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent"/>
+    <property name="stanbol.commons.namespaceprovider.prefixcc.update-interval" type="Integer" value="60"/>
+    <property name="service.ranking" type="Integer" value="-100"/>
+    <property name="service.vendor" value="Apache Stanbol"/>
+    <property name="service.pid" value="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent"/>
+    <reference name="offlineMode" interface="org.apache.stanbol.commons.stanboltools.offline.OfflineMode" cardinality="0..1" policy="dynamic" bind="bindOfflineMode" unbind="unbindOfflineMode"/>
+</scr:component>

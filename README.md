@@ -103,13 +103,13 @@ curl -X DELETE http://localhost:8080/stanbol/ontonethub/ontology/44HDRw9NEKK4gAf
 ##### Querying the OntoNetHub
 It is possible to query the OntoNetHub for retrieving OWL entities from the ontologies managed by the OntoNetHub. The following is an example of query for searching all the OWL entities having an annotation (i.e. `rdfs:label` or `rdfs:comment`) that match the string `Persona` in Italian.
 ```
-curl -X POST "http://localhost:8000/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=Persona&lang=it”
+curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=Persona&lang=it”
 ```
 It is possilble to use wildcards (i.e. `*`) in queries. Hence, if we want to find all possible terms staring with the word `Pers` the example above is converted to the following:
 ```
-curl -X POST "http://localhost:8000/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=Pers*&lang=it”
+curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=Pers*&lang=it”
 ```
-In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to `http://localhost:8000/ontonethub/ontology/{ontologyID}/find`, where `ontologyID` has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.
+In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to `http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find`, where `ontologyID` has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.
 
 ### Compiling from source code
 The OnteNetHub is released along with the source code, which is available in the folder `ontonethub-src`. The source code is written in Java and can be built by using [`Maven`](https://maven.apache.org/). The following command can be used for bulding the source code if executed by command line from the root of the `ontonethub-src` folder:

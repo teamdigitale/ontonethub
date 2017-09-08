@@ -1,7 +1,7 @@
 version: '2'
 services:
   ontonethub:
-    build: ./ontonethub-src
+    build: ./src
     container_name: ontonethub-src
     depends_on:
       - tomcat

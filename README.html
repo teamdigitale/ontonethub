@@ -78,12 +78,12 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
 </code></pre>
 <h5><a id="Querying_the_OntoNetHub_102"></a>Querying the OntoNetHub</h5>
 <p>It is possible to query the OntoNetHub for retrieving OWL entities from the ontologies managed by the OntoNetHub. The following is an example of query for searching all the OWL entities having an annotation (i.e. <code>rdfs:label</code> or <code>rdfs:comment</code>) that match the string <code>Persona</code> in Italian.</p>
-<pre><code>curl -X POST &quot;http://localhost:8000/ontonethub/ontologies/find&quot; -H  &quot;accept: application/json&quot; -H  &quot;content-type: application/x-www-form-urlencoded&quot; -d &quot;name=Persona&amp;lang=it”
+<pre><code>curl -X POST &quot;http://localhost:8000/stanbol/ontonethub/ontologies/find&quot; -H  &quot;accept: application/json&quot; -H  &quot;content-type: application/x-www-form-urlencoded&quot; -d &quot;name=Persona&amp;lang=it”
 </code></pre>
 <p>It is possilble to use wildcards (i.e. <code>*</code>) in queries. Hence, if we want to find all possible terms staring with the word <code>Pers</code> the example above is converted to the following:</p>
-<pre><code>curl -X POST &quot;http://localhost:8000/ontonethub/ontologies/find&quot; -H  &quot;accept: application/json&quot; -H  &quot;content-type: application/x-www-form-urlencoded&quot; -d &quot;name=Pers*&amp;lang=it”
+<pre><code>curl -X POST &quot;http://localhost:8000/stanbol/ontonethub/ontologies/find&quot; -H  &quot;accept: application/json&quot; -H  &quot;content-type: application/x-www-form-urlencoded&quot; -d &quot;name=Pers*&amp;lang=it”
 </code></pre>
-<p>In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to <code>http://localhost:8000/ontonethub/ontology/{ontologyID}/find</code>, where <code>ontologyID</code> has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.</p>
+<p>In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to <code>http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find</code>, where <code>ontologyID</code> has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.</p>
 <h3><a id="Compiling_from_source_code_113"></a>Compiling from source code</h3>
 <p>The OnteNetHub is released along with the source code, which is available in the folder <code>ontonethub-src</code>. The source code is written in Java and can be built by using <a href="https://maven.apache.org/"><code>Maven</code></a>. The following command can be used for bulding the source code if executed by command line from the root of the <code>ontonethub-src</code> folder:</p>
 <pre><code>mvn clean install

@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements. See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version
+    2.0 (the "License"); you may not use this file except in compliance
+    with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0 Unless required by
+    applicable law or agreed to in writing, software distributed under the
+    License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+    CONDITIONS OF ANY KIND, either express or implied. See the License for
+    the specific language governing permissions and limitations under the
+    License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.stanbol</groupId>
+    <artifactId>stanbol-parent</artifactId>
+    <version>6</version>
+    <relativePath>..</relativePath>
+  </parent>
+
+  <groupId>it.cnr.istc.stlab</groupId>
+  <artifactId>ontonethub.web</artifactId>
+  <version>0.1</version>
+  <packaging>bundle</packaging>
+
+  <name>Apache Stanbol Extension - OntonetHub REST HTTP API</name>
+
+  <description>
+  	This Stanbol extension provides a bundle that allows to manage and index ontologies.
+  </description>
+  
+  <licenses>
+    <license>
+      <name>Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+    
+  <scm>
+    <connection>
+      scm:svn:http://svn.apache.org/repos/asf/stanbol/tags/apache-stanbol-1.0.0/entityhub/indexing/genericrdf
+    </connection>
+    <developerConnection>
+      scm:svn:https://svn.apache.org/repos/asf/stanbol/tags/apache-stanbol-1.0.0/entityhub/indexing/genericrdf
+    </developerConnection>
+    <url>scm:svn:https://svn.apache.org/repos/asf/stanbol/tags/apache-stanbol-1.0.0/stanbol.apache.org/branches/release-1.0.0-branch</url>
+  </scm>
+
+   <build>
+	<plugins>
+		<plugin>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>maven-bundle-plugin</artifactId>
+			<extensions>true</extensions>
+			<configuration>
+				<instructions>
+					<Embed-Dependency>
+						guava,
+						protobuf-java,
+						cal10n-api;scope=compile|runtime
+					</Embed-Dependency>
+					<Embed-Transitive>true</Embed-Transitive>
+					<!-- Bundle-ClassPath>.,
+						lib/mallet-2.0.8-fixed.jar,
+						lib/trove4j-2.0.2.jar
+					</Bundle-ClassPath -->
+					<Import-Package>
+						<!-- !aQute.lib.osgi, -->
+						!org.glassfish.jersey.internal.*,
+						!org.glassfish.jersey.message.*,
+						!org.jvnet.mimepull,
+						!arq.*,
+						!net.sf.ehcache,
+						!net.spy.memcached,
+						!org.opensextant.*,
+						!org.apache.log4j.jmx,
+						!org.jboss.logging,
+						<!--  -->
+						!com.jcraft.jzlib,
+						!org.eclipse.*,
+						!junit.*,
+						!javax.servlet.jsp,
+						!org.jets3t.service,
+						!org.mortbay.*,
+						!org.apache.tools.ant.*,
+						!org.jdom.*,
+						!com.sun.jersey.spi.container.servlet,
+						!com.sun.jndi.ldap,
+						!com.thoughtworks.paranamer,
+						!org.jets3t.service.*,
+						!org.kosmix.kosmosfs.access,
+						!org.osgi.service.component.annotations,
+						!org.restlet.*,
+						!org.slf4j.impl,
+						!org.xerial.snappy,
+						!org.znerd.xmlenc,
+						!sun.net.dns,
+						!sun.net.util,
+						!org.apache.commons.net.ftp,
+						!org.apache.commons.net.util,
+						<!--  -->
+						*
+					</Import-Package>
+				</instructions>
+			</configuration>
+		</plugin>
+		<plugin>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>maven-scr-plugin</artifactId>
+		</plugin>
+		<plugin>
+			<groupId>org.apache.rat</groupId>
+			<artifactId>apache-rat-plugin</artifactId>
+			<configuration>
+				<excludes>
+					<!-- AL20 licensed files: See src/test/resources/README -->
+					<exclude>src/test/resources/*.txt</exclude>
+					<exclude>src/license/THIRD-PARTY.properties</exclude>
+				</excludes>
+			</configuration>
+		</plugin>
+		<plugin>
+             <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+             <version>3.6.1</version>
+             <configuration>
+               <source>1.8</source>
+               <target>1.8</target>
+             </configuration>
+           </plugin>
+	</plugins>
+  </build>
+
+  <dependencies>
+    <!-- indexing dependencies -->
+    <!-- dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.entityhub.indexing.core</artifactId>
+      <version>1.0.0</version>
+      <scope>runtime</scope>
+      <exclusions>
+      	<exclusion>
+      	<artifactId>log4j-over-slf4j</artifactId>
+      	<groupId>org.slf4j</groupId>
+      	</exclusion>
+      </exclusions>
+    </dependency -->
+    
+    <!-- namespace prefixes mappings -->
+    <dependency> <!-- provides the default Stanbol mappings -->
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.commons.namespaceprefix.provider.stanbol</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency> <!-- provides the prefix.cc mappings -->
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.commons.namespaceprefix.provider.prefixcc</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    
+    <!-- dependencies of the jena tdb source -->
+    <dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.entityhub.indexing.source.jenatdb</artifactId>
+      <version>1.0.0</version>
+      <scope>runtime</scope>
+      <exclusions>
+      	<exclusion>
+      	<artifactId>log4j-over-slf4j</artifactId>
+      	<groupId>org.slf4j</groupId>
+      	</exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-osgi</artifactId>
+      <version>2.13.0</version>
+    </dependency>
+    
+    <!-- Freemarker -->
+	<dependency>
+		<groupId>org.freemarker</groupId>
+		<artifactId>freemarker</artifactId>
+		<version>2.3.20</version>
+	</dependency>
+	
+	<!-- Stanbol Jobs -->
+	<dependency>
+	  <groupId>org.apache.stanbol</groupId>
+  	  <artifactId>org.apache.stanbol.commons.jobs.api</artifactId>
+  	  <version>1.0.0</version>
+	</dependency>
+	
+	<!-- Stanbol Web -->
+	<dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.commons.web.base</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.commons.web.viewable</artifactId>
+      <version>1.0.0</version>      
+    </dependency>
+
+	<!-- Stanbol Entityhub -->
+	<dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.entityhub.servicesapi</artifactId>
+      <version>1.0.0</version>
+    </dependency>   
+    <dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.entityhub.model.clerezza</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.entityhub.ldpath</artifactId>
+      <version>1.0.0</version>
+    </dependency> 
+    
+    <!-- jersey-media-multipart -->
+	<dependency>
+      <groupId>org.glassfish.jersey.media</groupId>
+      <artifactId>jersey-media-multipart</artifactId>
+      <version>2.7</version>
+    </dependency>
+    
+    
+    
+    <!-- Jettison -->
+	<dependency>
+      <groupId>org.codehaus.jettison</groupId>
+      <artifactId>jettison</artifactId>
+      <!-- version>1.3.8</version -->
+    </dependency>
+    
+    <!-- Jackson databind -->
+	<dependency>
+	  <groupId>com.fasterxml.jackson.core</groupId>
+	  <artifactId>jackson-databind</artifactId>
+	  <version>2.6.3</version>
+	</dependency>
+	
+	<!-- Ccommons fileupload -->
+	<dependency>
+      <groupId>commons-fileupload</groupId>
+      <artifactId>commons-fileupload</artifactId>
+      <version>1.3.1</version>
+	</dependency>
+	
+	<!--  Apache Jena ARQ -->
+	<dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-arq</artifactId>
+      <version>2.13.0</version>
+	</dependency>
+	
+	<dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-arq</artifactId>
+      <version>2.13.0</version>
+	</dependency>
+	<dependency>
+      <groupId>org.apache.jena</groupId>
+      <artifactId>jena-tdb</artifactId>
+      <version>1.0.2</version>
+	</dependency>
+	
+	<!-- Guava -->
+	<dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>18.0</version>
+	</dependency>
+	
+	<!-- Pprotobuf-java -->
+	<dependency>
+      <groupId>com.google.protobuf</groupId>
+      <artifactId>protobuf-java</artifactId>
+      <version>2.4.0a</version>
+	</dependency>
+	
+	<!-- Cal10n api -->
+	<dependency>
+      <groupId>ch.qos.cal10n</groupId>
+      <artifactId>cal10n-api</artifactId>
+      <version>0.8.1</version>
+	</dependency>
+	
+	
+	
+	<!-- Ontology Manager -->
+	<dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.ontologymanager.servicesapi</artifactId>
+      <version>1.0.0</version>
+	</dependency>
+	<dependency>
+      <groupId>org.apache.stanbol</groupId>
+      <artifactId>org.apache.stanbol.ontologymanager.sources.owlapi</artifactId>
+      <version>1.0.0</version>
+	</dependency>
+	
+	<!-- OntoNet API -->
+	<dependency>
+	  <groupId>it.cnr.istc.stlab</groupId>
+  	  <artifactId>ontonethub</artifactId>
+  	  <version>0.1</version>
+  	</dependency>
+	
+	
+  </dependencies>
+
+</project>

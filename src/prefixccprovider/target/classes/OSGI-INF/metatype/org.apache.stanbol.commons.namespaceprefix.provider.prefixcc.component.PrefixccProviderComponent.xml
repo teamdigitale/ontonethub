@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?><metatype:MetaData xmlns:metatype="http://www.osgi.org/xmlns/metatype/v1.0.0" localization="OSGI-INF/metatype/metatype">
+    <OCD id="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent" name="%org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent.name" description="%org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent.description">
+        <AD id="stanbol.commons.namespaceprovider.prefixcc.update-interval" type="Integer" default="60" name="%stanbol.commons.namespaceprovider.prefixcc.update-interval.name" description="%stanbol.commons.namespaceprovider.prefixcc.update-interval.description"/>
+    </OCD>
+    <Designate pid="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent">
+        <Object ocdref="org.apache.stanbol.commons.namespaceprefix.provider.prefixcc.component.PrefixccProviderComponent"/>
+    </Designate>
+</metatype:MetaData>
