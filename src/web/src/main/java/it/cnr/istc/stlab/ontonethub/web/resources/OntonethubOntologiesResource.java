@@ -132,6 +132,12 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 			try {
 				String jsonString = objectMapper.writeValueAsString(ontologyInfo);
 				JSONObject json = new JSONObject(jsonString);
+				String ontologyId = json.getString("ontologyID");
+				
+				if(ontologyId != null){
+					String ontologySourceURI = uriInfo.getBaseUri() + "ontonethub/ontology/" + ontologyId + "/source";
+					json.put("ontologySource", ontologySourceURI);
+				}
 				array.put(json);
 				
 			} catch (JsonProcessingException | JSONException e) {

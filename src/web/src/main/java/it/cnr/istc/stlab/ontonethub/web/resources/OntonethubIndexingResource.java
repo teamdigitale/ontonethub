@@ -80,11 +80,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hp.hpl.jena.rdf.model.Model;
 
-import it.cnr.istc.stlab.ontonethub.OntologyInfo;
-import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.NoSuchOntologyException;
 import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyAlreadyExistingException;
+import it.cnr.istc.stlab.ontonethub.OntologyInfo;
+import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJobInput;
 import it.cnr.istc.stlab.ontonethub.web.utils.JerseyUtils;
 
@@ -190,8 +190,13 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
 			String json;
 			try {
 				json = objectMapper.writeValueAsString(ontologyInfo);
+				
+				JSONObject jsonObject = new JSONObject(json);
+				String ontologySourceURI = uriInfo.getBaseUri() + "ontonethub/ontology/" + id + "/source";
+				jsonObject.put("ontologySource", ontologySourceURI);
+				
 				responseBuilder = Response.ok(json);
-			} catch (JsonProcessingException e) {
+			} catch (JsonProcessingException | JSONException e) {
 				JSONObject jsonO = new JSONObject();
 				try {
 					jsonO.put("error", e.getMessage());
