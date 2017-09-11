@@ -62,6 +62,14 @@ public interface OntoNetHub {
 	OntologyInfo getOntologyInfo(String id) throws NoSuchOntologyException;
 	
 	/**
+	 * The method returns all the metadata associated with the ontologies available in the index.
+	 * 
+	 * @return
+	 * @throws NoSuchOntologyException
+	 */
+	OntologyInfo[] getOntologiesInfo();
+	
+	/**
 	 * The method allows developers to delete ontology from the OntoNetHub.
 	 * 
 	 * @param id

@@ -1,6 +1,5 @@
 package it.cnr.istc.stlab.ontonethub.web.resources;
 
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_BUNDLE;
 import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.getLDPathParseExceptionMessage;
 import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.prepareQueryLDPathProgram;
 import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.transformQueryResults;
@@ -31,10 +30,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
-import org.apache.clerezza.commons.rdf.BlankNodeOrIRI;
-import org.apache.clerezza.commons.rdf.Graph;
-import org.apache.clerezza.commons.rdf.IRI;
-import org.apache.clerezza.commons.rdf.Triple;
 import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.RDFS;
 import org.apache.felix.scr.annotations.Component;
@@ -61,12 +56,18 @@ import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
 import org.apache.stanbol.entityhub.servicesapi.site.SiteManager;
 import org.apache.stanbol.entityhub.servicesapi.util.AdaptingIterator;
 import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import it.cnr.istc.stlab.ontonethub.OntoNetHub;
+import it.cnr.istc.stlab.ontonethub.OntologyInfo;
 import it.cnr.istc.stlab.ontonethub.web.utils.JerseyUtils;
 
 @Component
@@ -98,10 +99,15 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	@Reference
     private SiteManager referencedSiteManager;
 	
+	@Reference
+	private OntoNetHub ontonetHub;
+	
 	@Context 
 	private UriInfo uriInfo;
 	
 	private ComponentContext ctx;
+	
+	private ObjectMapper objectMapper;
 	
 	@OPTIONS
     public Response handleCorsPreflight(@Context HttpHeaders headers){
@@ -119,21 +125,21 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	@Consumes(MediaType.WILDCARD)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listOntologies(){
-		
-		Graph g = tcManager.getMGraph(new IRI("ontonethub-graph"));
-		Iterator<Triple> tripleIt = g.filter(null, 
-				new IRI(HAS_BUNDLE), 
-				null);
-		
 		JSONArray array = new JSONArray();
-		while(tripleIt.hasNext()){
-			Triple triple = tripleIt.next();
-			BlankNodeOrIRI subject = triple.getSubject();
-			String uri = subject.toString();
-			uri = uri.substring(1, uri.length()-1)
-					.replace(OntologyDescriptionVocabulary.ONTOLOGY , uriInfo.getBaseUri() + "ontonethub/ontology/");
-			array.put(uri);
+		
+		OntologyInfo[] ontologyInfos = ontonetHub.getOntologiesInfo();
+		for(OntologyInfo ontologyInfo : ontologyInfos){
+			try {
+				String jsonString = objectMapper.writeValueAsString(ontologyInfo);
+				JSONObject json = new JSONObject(jsonString);
+				array.put(json);
+				
+			} catch (JsonProcessingException | JSONException e) {
+				log.error(e.getMessage(), e);
+			}	
 		}
+		
+		
 		return Response.ok(array.toString()).build();
 	}
 	
@@ -190,10 +196,12 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	
 	protected void activate(ComponentContext ctx) throws ConfigurationException, FileNotFoundException, IOException {
 		this.ctx = ctx;
+		this.objectMapper = new ObjectMapper();
 	}
 	
 	protected void deactivate(ComponentContext ctx) {
 		this.ctx= null;
+		this.objectMapper = null;
 	}
 	
 	/**

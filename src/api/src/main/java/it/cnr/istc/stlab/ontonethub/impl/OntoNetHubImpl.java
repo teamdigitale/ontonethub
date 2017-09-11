@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.clerezza.commons.rdf.BlankNodeOrIRI;
 import org.apache.clerezza.commons.rdf.Graph;
 import org.apache.clerezza.commons.rdf.IRI;
 import org.apache.clerezza.commons.rdf.Literal;
@@ -47,12 +48,12 @@ import org.slf4j.LoggerFactory;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.util.FileManager;
 
-import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
-import it.cnr.istc.stlab.ontonethub.OntologyInfo;
-import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.NoSuchOntologyException;
 import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyAlreadyExistingException;
+import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
+import it.cnr.istc.stlab.ontonethub.OntologyInfo;
+import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJob;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJobInput;
 
@@ -110,6 +111,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 		this.tcManager = tcManager;
 	}
 
+	@Override
 	public String indexOntology(IndexingJobInput input) throws OntologyAlreadyExistingException {
 		
 		Site site = siteManager.getSite(input.getName());
@@ -124,6 +126,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 		
 	}
 	
+	@Override
 	public void deleteOntologyIndex(String id) throws UnmappableOntologyException, NoSuchOntologyException {
 		
 		boolean found = false;
@@ -220,6 +223,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 		}
 	}
 	
+	@Override
 	public OntologyInfo getOntologyInfo(String id) throws NoSuchOntologyException {
 		String ontologyURI = ONTOLOGY + id;
 		
@@ -236,133 +240,178 @@ public class OntoNetHubImpl implements OntoNetHub {
 		
 		OntologyInfo ontologyInfo = null;
 		
-		if(bundleId != null){
-			Bundle bundle = ctx.getBundleContext().getBundle(Long.valueOf(bundleId));
-			if(bundle != null){
-				ontologyInfo = new OntologyInfo();
-				ontologyInfo.setOntologyID(id);
-				
-				String ontologyName = null;
-				String ontologyDescription = null;
-				String ontologyIRI = null;
-				
-				
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						RDFS.label, 
-						null);
-				if(tripleIt.hasNext()){
-					Literal literal = (Literal) tripleIt.next().getObject();
-					ontologyName = literal.getLexicalForm();
-				}
-				
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						DC.description, 
-						null);
-				if(tripleIt.hasNext()){
-					Literal literal = (Literal) tripleIt.next().getObject();
-					ontologyDescription= literal.getLexicalForm();
-				}
-				
-				String sourceIRI = ontologyURI + "/source";
-				ontologyInfo.setOntologySource(sourceIRI);
-				ontologyInfo.setOntologyName(ontologyName);
-				ontologyInfo.setOntologyDescription(ontologyDescription);
-				
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(HAS_ONTOLOGY_IRI), 
-						null);
-				if(tripleIt.hasNext()){
-					IRI iri = (IRI) tripleIt.next().getObject();
-					ontologyIRI = iri.toString().replace("<", "").replace(">", "");
-				}
-				ontologyInfo.setOntologyIRI(ontologyIRI);
-				
-				/*
-				 * OWL classes
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(OWL_CLASSES), 
-						null);
-				int owlClasses = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					owlClasses = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setOwlClasses(owlClasses);
-				
-				/*
-				 * Object properties
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(OBJECT_PROPERTIES), 
-						null);
-				int objectProperties = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					objectProperties = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setObjectProperties(objectProperties);
-				
-				/*
-				 * Datatype properties
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(DATATYPE_PROPERTIES), 
-						null);
-				int datatypeProperties = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					datatypeProperties = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setDatatypeProperties(datatypeProperties);
-				
-				/*
-				 * Annotation properties
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(ANNOTATION_PROPERTIES), 
-						null);
-				int annotationProperties = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					annotationProperties = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setAnnotationProperties(annotationProperties);
-				
-				/*
-				 * Individuals
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(INDIVIDUALS), 
-						null);
-				int individuals = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					individuals = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setIndividuals(individuals);
-				
-				/*
-				 * Individuals
-				 */
-				tripleIt = g.filter(new IRI(ontologyURI), 
-						new IRI(IMPORTED_ONTOLOGIES), 
-						null);
-				int importedOntologies = 0;
-				if(tripleIt.hasNext()){
-					String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
-					importedOntologies = Integer.valueOf(lexicalForm);
-				}
-				ontologyInfo.setImportedOntologies(importedOntologies);
-				
-				
-			}
-		}
+		if(bundleId != null) ontologyInfo = ontologyInfo(id, bundleId, g);
 		
 		if(ontologyInfo == null) throw new NoSuchOntologyException(id);
 		else return ontologyInfo;
 	}
 	
+	
+	@Override
+	public OntologyInfo[] getOntologiesInfo() {
+		List<OntologyInfo> ontologiesInfo =  new ArrayList<OntologyInfo>();
+		
+		Graph g = tcManager.getMGraph(new IRI("ontonethub-graph"));
+		Iterator<Triple> tripleIt = g.filter(null, 
+				new IRI(HAS_BUNDLE), 
+				null);
+		
+		String bundleId = null;
+		while(tripleIt.hasNext()){
+			Triple triple = tripleIt.next();
+			BlankNodeOrIRI subject = triple.getSubject();
+			String ontologyId = subject.toString().replace("<", "").replace(">", "");
+			ontologyId = ontologyId.substring(ontologyId.lastIndexOf("/")+1);
+			
+			Literal bundleIdLiteral = (Literal) triple.getObject();
+			bundleId = bundleIdLiteral.getLexicalForm();
+			if(bundleId != null){
+				OntologyInfo ontologyInfo;
+				try {
+					ontologyInfo = ontologyInfo(ontologyId, bundleId, g);
+				} catch (NoSuchOntologyException e) {
+					ontologyInfo = null;
+				}
+				if(ontologiesInfo != null) ontologiesInfo.add(ontologyInfo);
+			}
+		}
+		
+		OntologyInfo[] ontologiesInfoArray = new OntologyInfo[ontologiesInfo.size()];
+		
+		return ontologiesInfo.toArray(ontologiesInfoArray);
+	}
+	
+	private OntologyInfo ontologyInfo(String ontologyId, String bundleId, Graph g) throws NoSuchOntologyException {
+		String ontologyURI = ONTOLOGY + ontologyId;
+		
+		OntologyInfo ontologyInfo = null;
+		
+		Bundle bundle = ctx.getBundleContext().getBundle(Long.valueOf(bundleId));
+		if(bundle != null){
+			ontologyInfo = new OntologyInfo();
+			ontologyInfo.setOntologyID(ontologyId);
+			
+			String ontologyName = null;
+			String ontologyDescription = null;
+			String ontologyIRI = null;
+			
+			
+			Iterator<Triple> tripleIt = g.filter(new IRI(ontologyURI), 
+					RDFS.label, 
+					null);
+			if(tripleIt.hasNext()){
+				Literal literal = (Literal) tripleIt.next().getObject();
+				ontologyName = literal.getLexicalForm();
+			}
+			
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					DC.description, 
+					null);
+			if(tripleIt.hasNext()){
+				Literal literal = (Literal) tripleIt.next().getObject();
+				ontologyDescription= literal.getLexicalForm();
+			}
+			
+			String sourceIRI = ontologyURI + "/source";
+			ontologyInfo.setOntologySource(sourceIRI);
+			ontologyInfo.setOntologyName(ontologyName);
+			ontologyInfo.setOntologyDescription(ontologyDescription);
+			
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(HAS_ONTOLOGY_IRI), 
+					null);
+			if(tripleIt.hasNext()){
+				IRI iri = (IRI) tripleIt.next().getObject();
+				ontologyIRI = iri.toString().replace("<", "").replace(">", "");
+			}
+			ontologyInfo.setOntologyIRI(ontologyIRI);
+			
+			/*
+			 * OWL classes
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(OWL_CLASSES), 
+					null);
+			int owlClasses = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				owlClasses = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setOwlClasses(owlClasses);
+			
+			/*
+			 * Object properties
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(OBJECT_PROPERTIES), 
+					null);
+			int objectProperties = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				objectProperties = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setObjectProperties(objectProperties);
+			
+			/*
+			 * Datatype properties
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(DATATYPE_PROPERTIES), 
+					null);
+			int datatypeProperties = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				datatypeProperties = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setDatatypeProperties(datatypeProperties);
+			
+			/*
+			 * Annotation properties
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(ANNOTATION_PROPERTIES), 
+					null);
+			int annotationProperties = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				annotationProperties = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setAnnotationProperties(annotationProperties);
+			
+			/*
+			 * Individuals
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(INDIVIDUALS), 
+					null);
+			int individuals = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				individuals = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setIndividuals(individuals);
+			
+			/*
+			 * Individuals
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					new IRI(IMPORTED_ONTOLOGIES), 
+					null);
+			int importedOntologies = 0;
+			if(tripleIt.hasNext()){
+				String lexicalForm = ((Literal)tripleIt.next().getObject()).getLexicalForm();
+				importedOntologies = Integer.valueOf(lexicalForm);
+			}
+			ontologyInfo.setImportedOntologies(importedOntologies);
+			
+			
+		}
+		
+		if(ontologyInfo == null) throw new NoSuchOntologyException(ontologyId);
+		else return ontologyInfo;
+	}
+	
+	@Override
 	public Model getOntologySource(String id) throws NoSuchOntologyException {
 		
 		try {
