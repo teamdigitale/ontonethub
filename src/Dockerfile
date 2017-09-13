@@ -11,4 +11,5 @@ RUN ["mvn", "clean", "install"]
 
 FROM tomcat:8
 WORKDIR /usr/local/tomcat/webapps/
+RUN ["rm", "-rf", "stanbol*"]
 COPY --from=ontonet /ontonethub-src/war/target/stanbol.war .

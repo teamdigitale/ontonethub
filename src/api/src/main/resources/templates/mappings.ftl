@@ -43,6 +43,8 @@ rdfs:seeAlso | d=entityhub:ref
 
 
 owl:sameAs | d=entityhub:ref
+rdfs:domain | d=entityhub:ref
+rdfs:range | d=entityhub:ref
 
 #If one likes to also index ontologies one should add the following statements
 #owl:*

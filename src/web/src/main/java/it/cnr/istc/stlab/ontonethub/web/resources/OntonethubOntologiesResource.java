@@ -2,7 +2,6 @@ package it.cnr.istc.stlab.ontonethub.web.resources;
 
 import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.getLDPathParseExceptionMessage;
 import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.prepareQueryLDPathProgram;
-import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.transformQueryResults;
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
 import static org.apache.stanbol.commons.web.base.utils.MediaTypeUtil.getAcceptableMediaType;
 
@@ -11,7 +10,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -43,18 +41,15 @@ import org.apache.stanbol.commons.namespaceprefix.NamespaceMappingUtils;
 import org.apache.stanbol.commons.namespaceprefix.NamespacePrefixService;
 import org.apache.stanbol.commons.web.base.resource.BaseStanbolResource;
 import org.apache.stanbol.commons.web.viewable.Viewable;
-import org.apache.stanbol.entityhub.core.query.QueryResultListImpl;
 import org.apache.stanbol.entityhub.ldpath.EntityhubLDPath;
 import org.apache.stanbol.entityhub.ldpath.backend.SiteManagerBackend;
 import org.apache.stanbol.entityhub.ldpath.query.LDPathSelect;
 import org.apache.stanbol.entityhub.model.clerezza.RdfValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.model.Entity;
-import org.apache.stanbol.entityhub.servicesapi.model.Representation;
 import org.apache.stanbol.entityhub.servicesapi.model.ValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
 import org.apache.stanbol.entityhub.servicesapi.site.SiteManager;
-import org.apache.stanbol.entityhub.servicesapi.util.AdaptingIterator;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -228,7 +223,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
             return executeLDPathQuery(manager, query, ((LDPathSelect)query).getLDPathSelect(),
                 mediaType, headers);
         } else { //use the default query execution
-            QueryResultList<Representation> result = manager.find(query);
+            QueryResultList<Entity> result = manager.findEntities(query);
             ResponseBuilder rb = Response.ok(result);
             rb.header(HttpHeaders.CONTENT_TYPE, mediaType+"; charset=utf-8");
             //addCORSOrigin(servletContext, rb, headers);
@@ -244,7 +239,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
      * @return the response
      */
     private Response executeLDPathQuery(SiteManager manager,FieldQuery query, String ldpathProgramString, MediaType mediaType, HttpHeaders headers) {
-        QueryResultList<Representation> result;
+        QueryResultList<Entity> result;
         ValueFactory vf = new RdfValueFactory(new IndexedGraph());
         SiteManagerBackend backend = new SiteManagerBackend(manager);
         EntityhubLDPath ldPath = new EntityhubLDPath(backend,vf);
@@ -274,6 +269,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         //2. execute the query
         // we need to adapt from Entity to Representation
         //TODO: should we add the metadata to the result?
+        /*
         Iterator<Representation> resultIt = new AdaptingIterator<Entity,Representation>(manager.findEntities(query).iterator(),
             new AdaptingIterator.Adapter<Entity,Representation>() {
                 @Override
@@ -284,6 +280,8 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         Collection<Representation> transformedResults = transformQueryResults(resultIt, program,
             selectedFields, ldPath, backend, vf);
         result = new QueryResultListImpl<Representation>(query, transformedResults, Representation.class);
+        */
+        result = manager.findEntities(query);
         ResponseBuilder rb = Response.ok(result);
         rb.header(HttpHeaders.CONTENT_TYPE, mediaType+"; charset=utf-8");
         //addCORSOrigin(servletContext, rb, headers);

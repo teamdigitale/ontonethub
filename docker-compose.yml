@@ -5,11 +5,5 @@ services:
     container_name: ontonethub-src
     ports:
      - 8000:8080
-    entrypoint: /usr/local/tomcat/bin/catalina.sh run
-    volumes:
-      - myshare:/usr/local/tomcat/webapps
-volumes:
-  myshare:
-    driver: local      
-     
+    entrypoint: /usr/local/tomcat/bin/catalina.sh run     
      

@@ -1,7 +1,16 @@
 package it.cnr.istc.stlab.ontonethub.job;
 
 
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.*;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ANNOTATION_PROPERTIES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.DATATYPE_PROPERTIES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_BUNDLE;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_ONTOLOGY_IRI;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.IMPORTED_ONTOLOGIES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.INDIVIDUALS;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OBJECT_PROPERTIES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ONTOLOGY;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OWL_CLASSES;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -114,6 +123,12 @@ public class IndexingJob implements Job {
 			File configFolder = new File(tempFolder, "indexing" + File.separator + "config");
 			Writer writer = new FileWriter(new File(configFolder, "indexing.properties"));
 			template.process(props, writer);
+			writer.close();
+			
+			template = cfg.getTemplate("mappings.ftl");
+			writer = new FileWriter(new File(configFolder, "mappings.txt"));
+			template.process(props, writer);
+			writer.close();
 			
 		} catch (ParseException e) {
 			log.error(e.getMessage(), e);

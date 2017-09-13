@@ -175,7 +175,7 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
 	@Consumes(MediaType.WILDCARD)
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response sayHello(){
-		return Response.ok("Hello, it's the OntoNetHub!").build();
+		return Response.ok("Welcome to the new Home of OntoNetHub for Semantic DAF!").build();
 	}
 	
 	@GET
@@ -184,6 +184,7 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
 	@Path("/{id}")
 	public Response getOntologyInfo(@PathParam("id") String id){
 		
+		log.info("This is an ontonethub search");
 		ResponseBuilder responseBuilder = null;
 		try {
 			OntologyInfo ontologyInfo = ontonetHub.getOntologyInfo(id);
