@@ -1,0 +1,6 @@
+# Syntax: '{prefix}\t{namespace}\n
+# where:
+#   {prefix} ... [0..9A..Za..z-_]
+#   {namespace} ... must end with '#' or '/' for URLs and ':' for URNs
+# one mapping per line, multiple prefixes for the same namespace allowed
+daf-v	http://dati.gov.it/onto/ann-voc/

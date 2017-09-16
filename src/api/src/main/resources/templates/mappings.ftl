@@ -39,12 +39,16 @@ rdf:type | d=entityhub:ref
 
 rdfs:label 
 rdfs:comment
+rdf:dafLabel
 rdfs:seeAlso | d=entityhub:ref
 
 
 owl:sameAs | d=entityhub:ref
 rdfs:domain | d=entityhub:ref
 rdfs:range | d=entityhub:ref
+
+http://dati.gov.it/onto/ann-voc/dafLabel
+http://dati.gov.it/onto/ann-voc/dafId
 
 #If one likes to also index ontologies one should add the following statements
 #owl:*

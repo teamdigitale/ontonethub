@@ -15,7 +15,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
@@ -46,9 +49,16 @@ import com.hp.hpl.jena.ontology.ObjectProperty;
 import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
+import com.hp.hpl.jena.ontology.OntProperty;
+import com.hp.hpl.jena.ontology.OntResource;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
+import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
+import com.hp.hpl.jena.vocabulary.OWL;
+import com.hp.hpl.jena.vocabulary.RDF;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -56,6 +66,7 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
+import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
 import it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl;
 
 /**
@@ -130,6 +141,13 @@ public class IndexingJob implements Job {
 			template.process(props, writer);
 			writer.close();
 			
+			
+			template = cfg.getTemplate("namespaceprefix.ftl");
+			writer = new FileWriter(new File(configFolder, "namespaceprefix.mappings"));
+			template.process(props, writer);
+			writer.close();
+			
+			
 		} catch (ParseException e) {
 			log.error(e.getMessage(), e);
 			errorMessage = "Indexing failed because of the following error: " + e.getMessage();
@@ -146,11 +164,70 @@ public class IndexingJob implements Job {
 		
 		IndexingJobResult indexingJobResult = null;
 		if(!error){
+			String jobId = JobManagerImpl.buildId(this);
 			
 			File rdfDataFolder = new File(tempFolder, "indexing" + File.separator + "resources" + File.separator + "rdfdata");
 			
 			String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
-			data.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
+			
+			OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
+			ontModel.add(data);
+			List<Statement> statements = new ArrayList<Statement>();
+			
+			int classCounter = 0;
+			int propCounter = 0;
+			ExtendedIterator<OntClass> classesIt = ontModel.listClasses();
+			while(classesIt.hasNext()){
+				OntClass ontClass = classesIt.next();
+				String localName = ontClass.getLocalName();
+				String dafLabel = ontologyName + "." + localName;
+				classCounter++;
+				
+				String dafId = jobId + ".class_" + classCounter;
+				Statement stmt = new StatementImpl(
+						ontClass, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_LABEL),
+						ResourceFactory.createPlainLiteral(dafLabel));
+				statements.add(stmt);
+				
+				stmt = new StatementImpl(
+						ontClass, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_ID),
+						ResourceFactory.createPlainLiteral(dafId));
+				statements.add(stmt);
+			}
+			
+			ExtendedIterator<OntProperty> ontPropertyIt = ontModel.listAllOntProperties();
+			while(ontPropertyIt.hasNext()){
+				OntProperty ontProperty = ontPropertyIt.next();
+				String localName = ontProperty.getLocalName();
+				
+				propCounter++;
+				OntResource domain = ontProperty.getDomain();
+				if(domain == null)
+					domain = ModelFactory.createOntologyModel().createOntResource(OWL.Thing.getURI());
+				
+				String classLabel = domain.getLocalName();
+				
+				String dafLabel = ontologyName + "." + classLabel + "." + localName;
+				String dafId = jobId + ".property_" + propCounter;
+				
+				Statement stmt = new StatementImpl(
+						ontProperty, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_LABEL),
+						ResourceFactory.createPlainLiteral(dafLabel));
+				statements.add(stmt);
+				
+				stmt = new StatementImpl(
+						ontProperty, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_ID),
+						ResourceFactory.createPlainLiteral(dafId));
+				statements.add(stmt);
+			}
+			
+			ontModel.add(statements);
+			
+			ontModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 			
 			Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
 			indexingProcess.waitFor();
@@ -174,7 +251,6 @@ public class IndexingJob implements Job {
 					bundle.start();
 					long bundleId = bundle.getBundleId();
 					
-					String jobId = JobManagerImpl.buildId(this);
 					IRI jobIRI = new IRI(ONTOLOGY + jobId);
 					
 					Graph g = tcManager.getMGraph(new IRI("ontonethub-graph"));
@@ -205,10 +281,9 @@ public class IndexingJob implements Job {
 					 */
 					File ontologyFile = new File(ontologiesFolder, jobId + "."
 							+ "rdf");
-					data.write(new FileOutputStream(ontologyFile));
+					ontModel.write(new FileOutputStream(ontologyFile));
 					
-					OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
-					ontModel.add(data);
+					
 					
 					/*
 					 * Ontology IRI
@@ -218,20 +293,10 @@ public class IndexingJob implements Job {
 							new IRI(HAS_ONTOLOGY_IRI),
 							new IRI(baseURI)));
 					
-					/*
-					 * OWL classes
-					 */
-					int classes = 0;
-					ExtendedIterator<OntClass> classesIt = ontModel.listClasses();
-					while(classesIt.hasNext()) {
-						classesIt.next();
-						classes++;
-					}
-					
 					g.add(new TripleImpl(
 							jobIRI,
 							new IRI(OWL_CLASSES),
-							new TypedLiteralImpl(String.valueOf(classes), XSD.int_)));
+							new TypedLiteralImpl(String.valueOf(classCounter), XSD.int_)));
 					
 					/*
 					 * Object properties

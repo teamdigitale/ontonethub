@@ -10,6 +10,8 @@ public class OntologyDescriptionVocabulary {
 	public static String NS = "http://dati.gov.it/onto/ann-voc/";
 	
 	public static String ONTOLOGY  = NS + "ontology/";
+	public static String DAF_LABEL  = NS + "dafLabel";
+	public static String DAF_ID  = NS + "dafId";
 	public static String HAS_BUNDLE = NS + "hasBundle";
 	public static String HAS_ONTOLOGY_IRI = NS + "hasOntologyIRI";
 	public static String OWL_CLASSES = NS + "owlClasses";
