@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +50,7 @@ import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.ontology.OntProperty;
 import com.hp.hpl.jena.ontology.OntResource;
+import com.hp.hpl.jena.ontology.Ontology;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
@@ -58,7 +58,6 @@ import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
-import com.hp.hpl.jena.vocabulary.RDF;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -174,6 +173,10 @@ public class IndexingJob implements Job {
 			ontModel.add(data);
 			List<Statement> statements = new ArrayList<Statement>();
 			
+			ExtendedIterator<Ontology> ontologyIt = ontModel.listOntologies();
+			Ontology ontology = null;
+			if(ontologyIt.hasNext()) ontology = ontologyIt.next();
+			
 			int classCounter = 0;
 			int propCounter = 0;
 			ExtendedIterator<OntClass> classesIt = ontModel.listClasses();
@@ -194,6 +197,12 @@ public class IndexingJob implements Job {
 						ontClass, 
 						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_ID),
 						ResourceFactory.createPlainLiteral(dafId));
+				statements.add(stmt);
+				
+				stmt = new StatementImpl(
+						ontClass, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DEFINED_IN_ONTOLOGY),
+						ontology);
 				statements.add(stmt);
 			}
 			
@@ -223,11 +232,17 @@ public class IndexingJob implements Job {
 						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DAF_ID),
 						ResourceFactory.createPlainLiteral(dafId));
 				statements.add(stmt);
+				
+				stmt = new StatementImpl(
+						ontProperty, 
+						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DEFINED_IN_ONTOLOGY),
+						ontology);
+				statements.add(stmt);
 			}
 			
 			ontModel.add(statements);
 			
-			ontModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
+			data.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 			
 			Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
 			indexingProcess.waitFor();

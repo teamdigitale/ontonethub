@@ -440,16 +440,6 @@ public class OntoNetHubImpl implements OntoNetHub {
 			graph = tcManager.getGraph(new IRI("ontonethub-graph"));
 		}
 		
-		/*
-		try {
-			this.onScope = scopeManager.createOntologyScope("ontonethub-scope", 
-					new BlankOntologySource());
-		} catch (DuplicateIDException e) {
-			log.info("The ontology scope already exists.");
-			this.onScope = scopeManager.getScope("ontonethub-scope");
-		}
-		*/
-		
 		this.ontologiesFolder = new File(stanbolHome + File.separator + "ontonethub-indexing" + File.separator + "ontologies");
 		ontologiesFolder.mkdirs();
 		if(indexerExecutablesUrl != null){
@@ -474,7 +464,6 @@ public class OntoNetHubImpl implements OntoNetHub {
 					String description = props.getProperty("description");
 					String iri = props.getProperty("iri");
 					
-					log.info("Inxing graph is {}", graph);
 					if(graph != null){
 					
 						try{
@@ -488,7 +477,6 @@ public class OntoNetHubImpl implements OntoNetHub {
 								IndexingJobInput indexingJobInput = new IndexingJobInput(name, description, iri, model);
 								try {
 									indexOntology(indexingJobInput);
-									log.info("Indexing {}", ontologyEntryPath);
 								} catch (OntologyAlreadyExistingException e) {
 									log.error(e.getMessage(), e);
 								}
@@ -502,7 +490,50 @@ public class OntoNetHubImpl implements OntoNetHub {
 		}
 	}
 	
-	
+	protected void deactivate(ComponentContext ctx) throws IOException {
+		/*
+		Graph graph = tcManager.getGraph(new IRI("ontonethub-graph"));
+		
+		Bundle bundle = ctx.getBundleContext().getBundle();
+		Enumeration<String> entryPaths = bundle.getEntryPaths("ontologies");
+		if(entryPaths != null){
+			while(entryPaths.hasMoreElements()){
+				String ontologyEntryPath = entryPaths.nextElement();
+				log.info("Reading ontology info from {}", ontologyEntryPath);
+				if(ontologyEntryPath.toLowerCase().endsWith(".conf")){
+					InputStream is = bundle.getEntry(ontologyEntryPath).openStream();
+					Properties props = new Properties();
+					props.load(is);
+					is.close();
+					
+					String name = props.getProperty("name");
+					String iri = props.getProperty("iri");
+					
+					if(graph != null){
+					
+						try{
+							Iterator<Triple> tripleIt = graph.filter(null, new IRI(OntologyDescriptionVocabulary.HAS_ONTOLOGY_IRI), new IRI(iri));
+							if(tripleIt != null && tripleIt.hasNext()) {
+								Triple triple = tripleIt.next();
+								IRI subject = (IRI)triple.getSubject();
+								String subjectIRI = subject.toString().replace("<", "").replace(">", "");
+								String ontologyId = subjectIRI.replace(ONTOLOGY, "");
+								
+								deleteOntologyIndex(ontologyId);
+								log.info("Unloaded ontology {} with ID {} from OntoNetHub for shutdown.", name, ontologyId);
+								System.out.println("Unloaded ontology " + name + " with ID " + ontologyId + " from OntoNetHub for shutdown.");
+							}
+						} catch(Exception e){
+							log.error("Error for ontology " + iri, e);
+						}
+					}
+				}
+			}
+		}
+		*/
+		
+		this.ctx = null;
+	}
 	
 
 }

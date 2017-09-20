@@ -105,13 +105,16 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	@Context 
 	private UriInfo uriInfo;
 	
-	private ComponentContext ctx;
-	
 	private ObjectMapper objectMapper;
 	
 	private static final String LDPATH_QUERY = "dafLabel = <http://dati.gov.it/onto/ann-voc/dafLabel> :: xsd:string; "
 			+ "dafId = <http://dati.gov.it/onto/ann-voc/dafId> :: xsd:string; "
-			+ "rdfLabel = rdfs:label%LANG% :: xsd:string;"; 
+			+ "rdfLabel = rdfs:label%LANG% :: xsd:string; "
+			+ "rdfLabel.class = rdfs:domain/rdfs:label%LANG% :: xsd:string; "
+			+ "rdfLabel.ont = <http://dati.gov.it/onto/ann-voc/definedInOntology>/rdfs:label%LANG% :: xsd:string; "
+			+ "comment = rdfs:comment[@it] :: xsd:string; "
+			+ "comment.class = rdfs:domain/rdfs:comment%LANG% :: xsd:string; "
+			+ "comment.ont = <http://dati.gov.it/onto/ann-voc/definedInOntology>/rdfs:comment%LANG% :: xsd:string;"; 
 	
 	@OPTIONS
     public Response handleCorsPreflight(@Context HttpHeaders headers){
@@ -213,12 +216,10 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
     }
 	
 	protected void activate(ComponentContext ctx) throws ConfigurationException, FileNotFoundException, IOException {
-		this.ctx = ctx;
 		this.objectMapper = new ObjectMapper();
 	}
 	
 	protected void deactivate(ComponentContext ctx) {
-		this.ctx= null;
 		this.objectMapper = null;
 	}
 	

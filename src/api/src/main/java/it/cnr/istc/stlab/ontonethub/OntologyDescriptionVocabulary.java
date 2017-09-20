@@ -12,6 +12,7 @@ public class OntologyDescriptionVocabulary {
 	public static String ONTOLOGY  = NS + "ontology/";
 	public static String DAF_LABEL  = NS + "dafLabel";
 	public static String DAF_ID  = NS + "dafId";
+	public static String DEFINED_IN_ONTOLOGY  = NS + "definedInOntology";
 	public static String HAS_BUNDLE = NS + "hasBundle";
 	public static String HAS_ONTOLOGY_IRI = NS + "hasOntologyIRI";
 	public static String OWL_CLASSES = NS + "owlClasses";
