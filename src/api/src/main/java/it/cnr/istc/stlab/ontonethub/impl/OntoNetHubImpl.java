@@ -476,7 +476,10 @@ public class OntoNetHubImpl implements OntoNetHub {
 								
 								IndexingJobInput indexingJobInput = new IndexingJobInput(name, description, iri, model);
 								try {
-									indexOntology(indexingJobInput);
+									String jobId = indexOntology(indexingJobInput);
+									while(!jobManager.ping(jobId).isDone())
+										Thread.sleep(1000);
+									
 								} catch (OntologyAlreadyExistingException e) {
 									log.error(e.getMessage(), e);
 								}

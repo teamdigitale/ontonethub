@@ -17,7 +17,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -51,10 +53,16 @@ import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.ontology.OntProperty;
 import com.hp.hpl.jena.ontology.OntResource;
 import com.hp.hpl.jena.ontology.Ontology;
+import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
+import com.hp.hpl.jena.rdf.model.NodeIterator;
+import com.hp.hpl.jena.rdf.model.Property;
+import com.hp.hpl.jena.rdf.model.RDFNode;
+import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
+import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
@@ -204,7 +212,18 @@ public class IndexingJob implements Job {
 						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DEFINED_IN_ONTOLOGY),
 						ontology);
 				statements.add(stmt);
+				
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.label, OntologyDescriptionVocabulary.ontologyLabel, ontClass, ontology));
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.comment, OntologyDescriptionVocabulary.ontologyComment, ontClass, ontology));
+				
 			}
+			
+			/*
+			 * Add statements to the model and empty the list of statements.
+			 */
+			ontModel.add(statements);
+			statements.removeAll(statements);
+			
 			
 			ExtendedIterator<OntProperty> ontPropertyIt = ontModel.listAllOntProperties();
 			while(ontPropertyIt.hasNext()){
@@ -217,6 +236,7 @@ public class IndexingJob implements Job {
 					domain = ModelFactory.createOntologyModel().createOntResource(OWL.Thing.getURI());
 				
 				String classLabel = domain.getLocalName();
+				if(classLabel == null) classLabel = "Thing";
 				
 				String dafLabel = ontologyName + "." + classLabel + "." + localName;
 				String dafId = jobId + ".property_" + propCounter;
@@ -238,11 +258,22 @@ public class IndexingJob implements Job {
 						ResourceFactory.createProperty(OntologyDescriptionVocabulary.DEFINED_IN_ONTOLOGY),
 						ontology);
 				statements.add(stmt);
+				
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.label, OntologyDescriptionVocabulary.ontologyLabel, ontProperty, ontology));
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.comment, OntologyDescriptionVocabulary.ontologyComment, ontProperty, ontology));
+				
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.label, OntologyDescriptionVocabulary.domainClassLabel, ontProperty, domain));
+				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.comment, OntologyDescriptionVocabulary.domainClassComment, ontProperty, domain));
+				
 			}
 			
 			ontModel.add(statements);
+			statements.removeAll(statements);
 			
-			data.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
+			keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.label, ontModel);
+			keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.comment, ontModel);
+			
+			ontModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 			
 			Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
 			indexingProcess.waitFor();
@@ -406,6 +437,142 @@ public class IndexingJob implements Job {
 		}
 		
 		return indexingJobResult;
+	}
+	
+	private List<Statement> createStatements(Property property, Property targetProperty, OntResource subjResource, OntResource resource){
+		
+		List<Statement> stmts = new ArrayList<Statement>();
+		
+		Map<String, String> literalMap = new HashMap<String, String>();
+		NodeIterator nodeIt = resource.listPropertyValues(property);
+		nodeIt.forEachRemaining(node -> {
+			if(node.isLiteral()){
+				Literal lit = node.asLiteral();
+				String lang = lit.getLanguage();
+				if(lang == null){
+					lang = "null";
+				}
+				String value = literalMap.get(lang);
+				if(value == null) value = "";
+				
+				String lexicalForm = lit.getLexicalForm();
+				if(lexicalForm.length() > value.length())
+					literalMap.put(lang, lexicalForm);
+			}
+		});
+		
+		literalMap.forEach((lang, sb) -> {
+			Statement stmt = null;
+			if(lang.equals("null"))
+				stmt = new StatementImpl(
+						subjResource,
+						targetProperty,
+						ResourceFactory.createPlainLiteral(sb));
+			else stmt = new StatementImpl(
+					subjResource,
+					targetProperty,
+					ResourceFactory.createLangLiteral(sb, lang));
+			
+			stmts.add(stmt);
+		});
+		
+		return stmts;
+		
+	}
+	
+	private List<Statement> collapseAnnotations(Property property, Model model){
+		
+		List<Statement> stmts = new ArrayList<Statement>();
+		
+		Map<String, Map<String,Statement>> literalMap = new HashMap<String, Map<String,Statement>>();
+		StmtIterator stmtIt = model.listStatements(null, property, (RDFNode) null);
+		stmtIt.forEachRemaining(stmt -> {
+			RDFNode obj = stmt.getObject();
+			if(obj.isLiteral()){
+				Literal lit = obj.asLiteral();
+				String lang = lit.getLanguage();
+				if(lang == null){
+					lang = "null";
+				}
+				Map<String, Statement> stmtMap = literalMap.get(lang);
+				if(stmtMap == null) {
+					stmtMap = new HashMap<String, Statement>();
+					literalMap.put(lang, stmtMap);
+				}
+				
+				Statement statement = stmtMap.get(lang);
+				boolean insert = false;
+				if(statement == null) insert = true;
+				else{
+					String statementLF = ((Literal)statement.getObject()).getLexicalForm();
+					String lexicalForm = lit.getLexicalForm();
+					if(lexicalForm.length() > statementLF.length()) insert = true;
+				}
+					
+					
+				if(insert) stmtMap.put(lang, statement);
+			}
+			
+		});
+		
+		model.removeAll(null, property, (RDFNode) null);
+		
+		literalMap.forEach((subject, stmtMap) -> {
+			stmtMap.forEach((lang, stmt) -> {
+				model.add(stmt);
+			});
+		});
+		
+		return stmts;
+		
+	}
+	
+	private List<Statement> keepMaxLengthAnnotationsOnly(Property property, Model model){
+		
+		List<Statement> stmts = new ArrayList<Statement>();
+		
+		Map<Resource, Map<String,Statement>> literalMap = new HashMap<Resource, Map<String,Statement>>();
+		StmtIterator stmtIt = model.listStatements(null, property, (RDFNode) null);
+		stmtIt.forEachRemaining(stmt -> {
+			Resource subj = stmt.getSubject();
+			RDFNode obj = stmt.getObject();
+			if(obj.isLiteral()){
+				Literal lit = obj.asLiteral();
+				String lang = lit.getLanguage();
+				if(lang == null){
+					lang = "null";
+				}
+				Map<String, Statement> stmtMap = literalMap.get(subj);
+				if(stmtMap == null) {
+					stmtMap = new HashMap<String, Statement>();
+					literalMap.put(subj, stmtMap);
+				}
+				
+				Statement statement = stmtMap.get(lang);
+				boolean insert = false;
+				if(statement == null) insert = true;
+				else{
+					String statementLF = ((Literal)statement.getObject()).getLexicalForm();
+					String lexicalForm = lit.getLexicalForm();
+					if(lexicalForm.length() > statementLF.length()) insert = true;
+				}
+					
+					
+				if(insert) stmtMap.put(lang, stmt);
+			}
+			
+		});
+		
+		model.removeAll(null, property, (RDFNode) null);
+		
+		literalMap.forEach((subject, stmtMap) -> {
+			stmtMap.forEach((lang, stmt) -> {
+				model.add(stmt);
+			});
+		});
+		
+		return stmts;
+		
 	}
 	
 	

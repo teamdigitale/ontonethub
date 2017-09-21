@@ -49,6 +49,10 @@ rdfs:range | d=entityhub:ref
 
 http://dati.gov.it/onto/ann-voc/dafLabel
 http://dati.gov.it/onto/ann-voc/dafId
+http://dati.gov.it/onto/ann-voc/domainClassLabel
+http://dati.gov.it/onto/ann-voc/domainClassComment
+http://dati.gov.it/onto/ann-voc/ontologyLabel
+http://dati.gov.it/onto/ann-voc/ontologyComment
 http://dati.gov.it/onto/ann-voc/definedInOntology | d=entityhub:ref
 
 #If one likes to also index ontologies one should add the following statements

@@ -9,6 +9,7 @@ import static org.apache.stanbol.commons.web.base.utils.MediaTypeUtil.getAccepta
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -43,6 +44,7 @@ import org.apache.stanbol.commons.namespaceprefix.NamespaceMappingUtils;
 import org.apache.stanbol.commons.namespaceprefix.NamespacePrefixService;
 import org.apache.stanbol.commons.web.base.resource.BaseStanbolResource;
 import org.apache.stanbol.commons.web.viewable.Viewable;
+import org.apache.stanbol.entityhub.core.model.InMemoryValueFactory;
 import org.apache.stanbol.entityhub.core.query.QueryResultListImpl;
 import org.apache.stanbol.entityhub.ldpath.EntityhubLDPath;
 import org.apache.stanbol.entityhub.ldpath.backend.SiteManagerBackend;
@@ -50,6 +52,7 @@ import org.apache.stanbol.entityhub.ldpath.query.LDPathSelect;
 import org.apache.stanbol.entityhub.model.clerezza.RdfValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.model.Entity;
 import org.apache.stanbol.entityhub.servicesapi.model.Representation;
+import org.apache.stanbol.entityhub.servicesapi.model.Text;
 import org.apache.stanbol.entityhub.servicesapi.model.ValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
@@ -203,16 +206,17 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
             }
         }
         String ldpathQuery = "";
+        /*
         if(language != null && !language.isEmpty())
         	ldpathQuery = LDPATH_QUERY.replace("%LANG%", "[@" + language + "]");
         else ldpathQuery = LDPATH_QUERY.replace("%LANG%", "");
         
         if(ldpath != null && !ldpath.isEmpty()) ldpathQuery += ldpath;
-        	
+        	*/
         
         FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(name, property, language,
             limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, offset, ldpathQuery);
-        return executeQuery(referencedSiteManager, query, acceptedMediaType, headers);
+        return executeQuery(referencedSiteManager, query, acceptedMediaType, language, headers);
     }
 	
 	protected void activate(ComponentContext ctx) throws ConfigurationException, FileNotFoundException, IOException {
@@ -234,19 +238,24 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
      * @return the response (results of error)
      */
     private Response executeQuery(SiteManager manager,
-                                  FieldQuery query, MediaType mediaType, 
+                                  FieldQuery query, MediaType mediaType, String lang, 
                                   HttpHeaders headers) throws WebApplicationException {
+    	/*
         if(query instanceof LDPathSelect && ((LDPathSelect)query).getLDPathSelect() != null){
             //use the LDPath variant to process this query
             return executeLDPathQuery(manager, query, ((LDPathSelect)query).getLDPathSelect(),
                 mediaType, headers);
         } else { //use the default query execution
-            QueryResultList<Representation> result = manager.find(query);
-            ResponseBuilder rb = Response.ok(result);
+        */
+            QueryResultList<Entity> result = manager.findEntities(query);
+            
+            QueryResultList<Representation> representations  = new QueryResultListImpl<Representation>(query, transformQueryResult(result, lang), Representation.class);
+            
+            ResponseBuilder rb = Response.ok(representations);
             rb.header(HttpHeaders.CONTENT_TYPE, mediaType+"; charset=utf-8");
             //addCORSOrigin(servletContext, rb, headers);
             return rb.build();
-        }
+        //}
     }
     
     /**
@@ -287,6 +296,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         //2. execute the query
         // we need to adapt from Entity to Representation
         //TODO: should we add the metadata to the result?
+        
         Iterator<Representation> resultIt = new AdaptingIterator<Entity,Representation>(manager.findEntities(query).iterator(),
             new AdaptingIterator.Adapter<Entity,Representation>() {
                 @Override
@@ -302,5 +312,54 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         //addCORSOrigin(servletContext, rb, headers);
         return rb.build();
     }
-	
+    
+    private Collection<Representation> transformQueryResult(QueryResultList<Entity> entities, String lang){
+    	Collection<Representation> transformedResults = new ArrayList<Representation>();
+    	ValueFactory vf = InMemoryValueFactory.getInstance();
+    	entities.forEach(entity -> {
+    		Representation representation = entity.getRepresentation();
+    		Representation newRepresentation = vf.createRepresentation(representation.getId());
+    		
+    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#label", "label", representation, newRepresentation, lang, vf);
+    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#comment", "comment", representation, newRepresentation, lang, vf);
+    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafLabel", "dafLabel", representation, newRepresentation, vf);
+    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafId", "dafId", representation, newRepresentation, vf);
+    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassLabel", "label.class", representation, newRepresentation, lang, vf);
+    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassComment", "comment.class", representation, newRepresentation, lang, vf);
+    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyLabel", "label.ontology", representation, newRepresentation, lang, vf);
+    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyComment", "comment.ontology", representation, newRepresentation, lang, vf);
+    		addObjectToRepresentation("http://stanbol.apache.org/ontology/entityhub/query#score", "score", representation, newRepresentation, vf);
+    		
+    		transformedResults.add(newRepresentation);
+    		
+    	});
+    	
+    	return transformedResults;
+    }
+    
+    
+    private void addTextToRepresentation(String oldFieldName, 
+    		String newFieldName, 
+    		Representation oldRepresentation, 
+    		Representation newRepresentation, String lang, ValueFactory vf){
+    	Iterator<Text> it = oldRepresentation.get(oldFieldName, lang);
+    	
+    	if(it != null){
+    		it.forEachRemaining(obj -> {
+				Text t = vf.createText(obj.getText(), lang);
+				newRepresentation.set(newFieldName, t);
+			});
+    	}
+    }
+    
+    private void addObjectToRepresentation(String oldFieldName, 
+    		String newFieldName, 
+    		Representation oldRepresentation, 
+    		Representation newRepresentation, ValueFactory vf){
+    	Iterator<Object> it = oldRepresentation.get(oldFieldName);
+    	if(it != null)
+			it.forEachRemaining(obj -> {
+				newRepresentation.set(newFieldName, obj);
+			});
+    }
 }
