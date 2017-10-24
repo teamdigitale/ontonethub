@@ -39,6 +39,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -54,13 +55,17 @@ import org.apache.stanbol.entityhub.core.query.DefaultQueryFactory;
 import org.apache.stanbol.entityhub.ldpath.query.LDPathFieldQueryImpl;
 import org.apache.stanbol.entityhub.servicesapi.model.Entity;
 import org.apache.stanbol.entityhub.servicesapi.model.Representation;
+import org.apache.stanbol.entityhub.servicesapi.query.Constraint;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQueryFactory;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
+import org.apache.stanbol.entityhub.servicesapi.query.SimilarityConstraint;
 import org.apache.stanbol.entityhub.servicesapi.query.TextConstraint;
 import org.apache.stanbol.entityhub.servicesapi.query.TextConstraint.PatternType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Lists;
 
 /**
  * Utility methods used by several of the RESTful service endpoints of the
@@ -203,8 +208,14 @@ public final class JerseyUtils {
         }
         if (language == null || language.trim().isEmpty()) {
             query.setConstraint(field, new TextConstraint(name, PatternType.wildcard, false));
+            
+            Constraint similarityConstraint = new SimilarityConstraint(name, null);
+            query.setConstraint(field, similarityConstraint);
         } else {
-            query.setConstraint(field, new TextConstraint(name, PatternType.wildcard, false, language));
+        	List<String> labels = Lists.newArrayList(name);
+        	List<String> languages = Lists.newArrayList(language);
+        	Constraint similarityConstraint = new SimilarityConstraint(labels, languages);
+            query.setConstraint(field, similarityConstraint);
         }
         if (limit != null && limit > 0) {
             query.setLimit(limit);

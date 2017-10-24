@@ -67,7 +67,6 @@ import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
 import org.apache.stanbol.entityhub.servicesapi.site.ManagedSite;
 import org.apache.stanbol.entityhub.servicesapi.site.Site;
 import org.apache.stanbol.entityhub.servicesapi.site.SiteException;
-import org.apache.stanbol.entityhub.servicesapi.site.SiteManager;
 import org.apache.stanbol.entityhub.servicesapi.util.AdaptingIterator;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -86,6 +85,7 @@ import it.cnr.istc.stlab.ontonethub.OntologyAlreadyExistingException;
 import it.cnr.istc.stlab.ontonethub.OntologyInfo;
 import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJobInput;
+import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
 import it.cnr.istc.stlab.ontonethub.web.utils.JerseyUtils;
 
 /**
@@ -128,7 +128,7 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
     private static final int DEFAULT_FIND_RESULT_LIMIT = 5;
 	
 	@Reference
-	private SiteManager siteManager;
+	private OntoNetHubSiteManager siteManager;
 	
 	@Reference
 	private TcManager tcManager;

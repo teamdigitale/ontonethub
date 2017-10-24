@@ -37,7 +37,6 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.stanbol.commons.jobs.api.JobManager;
 import org.apache.stanbol.entityhub.servicesapi.site.Site;
-import org.apache.stanbol.entityhub.servicesapi.site.SiteManager;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
 import org.osgi.service.cm.ConfigurationException;
@@ -46,8 +45,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Model;
+import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.util.FileManager;
 
+import it.cnr.istc.stlab.ontonethub.Constants;
 import it.cnr.istc.stlab.ontonethub.NoSuchOntologyException;
 import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyAlreadyExistingException;
@@ -56,6 +57,8 @@ import it.cnr.istc.stlab.ontonethub.OntologyInfo;
 import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJob;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJobInput;
+import it.cnr.istc.stlab.ontonethub.job.RDFIndexingJob;
+import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
 
 /**
  * Default implementation of the {@link OntoNetHub}.<br>
@@ -79,7 +82,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 	private ComponentContext ctx;
 	
 	@Reference
-	private SiteManager siteManager;
+	private OntoNetHubSiteManager siteManager;
 	
 	@Reference
 	private JobManager jobManager;
@@ -105,7 +108,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 	 * @param jobManager
 	 * @param tcManager
 	 */
-	public OntoNetHubImpl(SiteManager siteManager, JobManager jobManager, TcManager tcManager){
+	public OntoNetHubImpl(OntoNetHubSiteManager siteManager, JobManager jobManager, TcManager tcManager){
 		this.siteManager = siteManager;
 		this.jobManager = jobManager;
 		this.tcManager = tcManager;
@@ -115,9 +118,31 @@ public class OntoNetHubImpl implements OntoNetHub {
 	public String indexOntology(IndexingJobInput input) throws OntologyAlreadyExistingException {
 		
 		Site site = siteManager.getSite(input.getName());
+		
 		if(site == null){
+			IndexingJob job = null;
+			if(input.getOntologyId() == null)
+				job = new IndexingJob(siteManager, input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+			else 
+				job = new IndexingJob(siteManager, input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+			String jid = jobManager.execute(job);
 			
-			IndexingJob job = new IndexingJob(input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+			return jid;
+		}
+		else throw new OntologyAlreadyExistingException(input.getName());
+		
+	}
+	
+	private String indexRDF(IndexingJobInput input) throws OntologyAlreadyExistingException {
+		
+		Site site = siteManager.getSite(input.getName());
+		
+		if(site == null){
+			RDFIndexingJob job = null;
+			if(input.getOntologyId() == null)
+				job = new RDFIndexingJob(input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+			else 
+				job = new RDFIndexingJob(input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
 			String jid = jobManager.execute(job);
 			
 			return jid;
@@ -448,12 +473,31 @@ public class OntoNetHubImpl implements OntoNetHub {
 		
 		
 		
+		
 		Bundle bundle = ctx.getBundleContext().getBundle();
+		
+		URL wnEntryPath = bundle.getEntry("ontologies/wn.ttl");
+		if(wnEntryPath != null){
+			Model wnModel = ModelFactory.createDefaultModel();
+			
+			wnModel.read(wnEntryPath.openStream(), Constants.wordNetNamespace, "TURTLE");
+			
+			try {
+				deleteOntologyIndex(Constants.wordNetSiteID);
+			} catch (UnmappableOntologyException | NoSuchOntologyException e) {
+				log.warn("The index for WordNet does not exist.");
+			}
+			doIndexing(Constants.wordNetSiteID, 
+					Constants.wordNetSiteName, 
+					Constants.wordNetSiteDescription, 
+					Constants.wordNetNamespace, 
+					wnModel);
+		}
+		
 		Enumeration<String> entryPaths = bundle.getEntryPaths("ontologies");
 		if(entryPaths != null){
 			while(entryPaths.hasMoreElements()){
 				String ontologyEntryPath = entryPaths.nextElement();
-				log.info("Reading ontology info from {}", ontologyEntryPath);
 				if(ontologyEntryPath.toLowerCase().endsWith(".conf")){
 					InputStream is = bundle.getEntry(ontologyEntryPath).openStream();
 					Properties props = new Properties();
@@ -472,17 +516,34 @@ public class OntoNetHubImpl implements OntoNetHub {
 							if(tripleIt != null && tripleIt.hasNext()) indexContainsOntology = true;
 							
 							if(!indexContainsOntology){
-								Model model = FileManager.get().loadModel(iri);
-								
-								IndexingJobInput indexingJobInput = new IndexingJobInput(name, description, iri, model);
-								try {
-									String jobId = indexOntology(indexingJobInput);
-									while(!jobManager.ping(jobId).isDone())
-										Thread.sleep(1000);
+								log.info("Indexing ontology {}.", name);
+								doIndexing(null, name, description, iri);
+							}
+							else {
+								IRI localOntology = null;
+								if(tripleIt.hasNext()){
+									localOntology = (IRI) tripleIt.next().getSubject();
 									
-								} catch (OntologyAlreadyExistingException e) {
-									log.error(e.getMessage(), e);
+									String localOntologyIri = localOntology.toString().replace("<", "").replace(">", "");
+									String ontologyId = localOntologyIri.toString().replace(OntologyDescriptionVocabulary.ONTOLOGY, "");
+									File ontologyFile = new File(ontologiesFolder, ontologyId + "." + "rdf");
+									log.info("Local ontology IRI string: {}", ontologyId);
+									Model localModel = FileManager.get().loadModel(ontologyFile.getPath());
+									Model remoteModel = FileManager.get().loadModel(iri);
+									
+									
+									if(!localModel.isIsomorphicWith(remoteModel)){
+										
+										log.info("Updating ontology {} as a change occurred remoteley.", ontologyId);
+										
+										deleteOntologyIndex(ontologyId);
+										doIndexing(ontologyId, name, description, iri);
+									}
+									else log.info("The ontology {} did not change with respect to the remote image {}.", ontologyId, iri);
+									
 								}
+									
+								
 							}
 						} catch(Exception e){
 							log.error("Error for ontology " + iri, e);
@@ -538,5 +599,38 @@ public class OntoNetHubImpl implements OntoNetHub {
 		this.ctx = null;
 	}
 	
+	
+	private void doIndexing(String ontologyId, String name, String description, String iri){
+		Model model = FileManager.get().loadModel(iri);
+		
+		IndexingJobInput indexingJobInput = null;
+		if(ontologyId == null) indexingJobInput = new IndexingJobInput(name, description, iri, model);
+		else indexingJobInput = new IndexingJobInput(ontologyId, name, description, iri, model);
+		try {
+			String jobId = indexOntology(indexingJobInput);
+			while(!jobManager.ping(jobId).isDone())
+				Thread.sleep(1000);
+			
+		} catch (OntologyAlreadyExistingException | InterruptedException e) {
+			log.error(e.getMessage(), e);
+		}
+		
+	}
+	
+	private void doIndexing(String ontologyId, String name, String description, String iri, Model model){
+		
+		IndexingJobInput indexingJobInput = null;
+		if(ontologyId == null) indexingJobInput = new IndexingJobInput(name, description, iri, model);
+		else indexingJobInput = new IndexingJobInput(ontologyId, name, description, iri, model);
+		try {
+			String jobId = indexRDF(indexingJobInput);
+			while(!jobManager.ping(jobId).isDone())
+				Thread.sleep(1000);
+			
+		} catch (OntologyAlreadyExistingException | InterruptedException e) {
+			log.error(e.getMessage(), e);
+		}
+		
+	}
 
 }

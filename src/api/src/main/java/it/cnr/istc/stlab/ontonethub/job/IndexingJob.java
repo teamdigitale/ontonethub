@@ -1,15 +1,16 @@
 package it.cnr.istc.stlab.ontonethub.job;
 
-
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ANNOTATION_PROPERTIES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.DATATYPE_PROPERTIES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_BUNDLE;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_ONTOLOGY_IRI;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_ONTOLOGY_SOURCE;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.IMPORTED_ONTOLOGIES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.INDIVIDUALS;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OBJECT_PROPERTIES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ONTOLOGY;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OWL_CLASSES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.synonym;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -30,12 +32,19 @@ import org.apache.clerezza.commons.rdf.impl.utils.TripleImpl;
 import org.apache.clerezza.commons.rdf.impl.utils.TypedLiteralImpl;
 import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.DC;
-import org.apache.clerezza.rdf.ontologies.RDFS;
 import org.apache.clerezza.rdf.ontologies.XSD;
 import org.apache.commons.io.FileUtils;
 import org.apache.stanbol.commons.jobs.api.Job;
 import org.apache.stanbol.commons.jobs.api.JobResult;
 import org.apache.stanbol.commons.jobs.impl.JobManagerImpl;
+import org.apache.stanbol.entityhub.core.query.DefaultQueryFactory;
+import org.apache.stanbol.entityhub.servicesapi.model.Representation;
+import org.apache.stanbol.entityhub.servicesapi.model.Text;
+import org.apache.stanbol.entityhub.servicesapi.query.Constraint;
+import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
+import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
+import org.apache.stanbol.entityhub.servicesapi.query.SimilarityConstraint;
+import org.apache.stanbol.entityhub.servicesapi.site.Site;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -66,6 +75,7 @@ import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
+import com.hp.hpl.jena.vocabulary.RDFS;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -73,8 +83,10 @@ import freemarker.template.Configuration;
 import freemarker.template.Template;
 import freemarker.template.TemplateException;
 import freemarker.template.TemplateExceptionHandler;
+import it.cnr.istc.stlab.ontonethub.Constants;
 import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
 import it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl;
+import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
 
 /**
  * Implementation of the Stanbol Job interface that allows to execute the indexing of an ontology.
@@ -85,21 +97,21 @@ import it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl;
 
 public class IndexingJob implements Job {
 	
-	public static final String JOB_NS = "http://dati.gov.it/onto/job/";
-	
-	private String ontologyName, ontologyDescription, baseURI;
+	private String ontologyID, ontologyName, ontologyDescription, baseURI;
 	private Model data;
 	
 	private Logger log = LoggerFactory.getLogger(getClass());
 	private BundleContext ctx;
 	private String stanbolHome;
 	private TcManager tcManager;
+	private OntoNetHubSiteManager siteManager;
 	
 	private String bundleNamePattern = "org.apache.stanbol.data.site.{$name}-1.0.0.jar";
 	private String zippedIndexNamePattern = "{$name}.solrindex.zip";
 	private File ontologiesFolder;
 	
-	public IndexingJob(String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+	public IndexingJob(OntoNetHubSiteManager siteManager, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+		this.siteManager = siteManager;
 		this.ontologyName = ontologyName;
 		this.ontologyDescription = ontologyDescription;
 		this.baseURI = baseURI;
@@ -109,6 +121,11 @@ public class IndexingJob implements Job {
 		this.tcManager = tcManager;
 		this.ontologiesFolder = ontologiesFolder;
 		
+	}
+	
+	public IndexingJob(OntoNetHubSiteManager siteManager, String ontologyID, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+		this(siteManager, ontologyName, ontologyDescription, baseURI, data, ctx, tcManager, ontologiesFolder);
+		this.ontologyID = ontologyID;
 	}
 
 	@Override
@@ -123,7 +140,7 @@ public class IndexingJob implements Job {
 		Properties props = new Properties();
 		props.setProperty("name", ontologyName);
 		props.setProperty("description", ontologyDescription);
-
+		
 		boolean error = false;
 		String errorMessage = null; 
 		Template template;
@@ -273,6 +290,11 @@ public class IndexingJob implements Job {
 			keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.label, ontModel);
 			keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.comment, ontModel);
 			
+			/*
+			 * Add synonyms gathered from WordNet.
+			 */
+			ontModel.add(getSynonyms(RDFS.label, ontModel));
+			
 			ontModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 			
 			Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
@@ -284,7 +306,7 @@ public class IndexingJob implements Job {
 			String zippedIndexFileName = zippedIndexNamePattern.replace("{$name}", ontologyName);
 			File zippedIndexFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  zippedIndexFileName);
 			
-			log.info("bundleFile {}", bundleFile.getPath());
+			log.debug("bundleFile {}", bundleFile.getPath());
 			if(bundleFile.exists() && zippedIndexFile.exists()){
 				
 				File stanbolDatafiles = new File(stanbolHome + File.separator + "datafiles");
@@ -292,12 +314,16 @@ public class IndexingJob implements Job {
 				Files.copy(zippedIndexFile, deployedIndex);
 				
 				try{
-					log.info("Bundle URI: {} - URL: {}", bundleFile.toURI(), bundleFile.toURI().toURL());
+					log.debug("Bundle URI: {} - URL: {}", bundleFile.toURI(), bundleFile.toURI().toURL());
 					Bundle bundle = ctx.installBundle(bundleFile.toURI().toString());
 					bundle.start();
 					long bundleId = bundle.getBundleId();
 					
-					IRI jobIRI = new IRI(ONTOLOGY + jobId);
+					String ontId = null;
+					if(ontologyID != null) ontId = ontologyID;
+					else ontId = jobId;
+					
+					IRI jobIRI = new IRI(ONTOLOGY + ontId);
 					
 					Graph g = tcManager.getMGraph(new IRI("ontonethub-graph"));
 					g.add(new TripleImpl(
@@ -311,7 +337,7 @@ public class IndexingJob implements Job {
 					 */
 					g.add(new TripleImpl(
 							jobIRI,
-							RDFS.label,
+							org.apache.clerezza.rdf.ontologies.RDFS.label,
 							new PlainLiteralImpl(ontologyName)));
 					
 					/*
@@ -325,12 +351,15 @@ public class IndexingJob implements Job {
 					/*
 					 * Store ontology file
 					 */
-					File ontologyFile = new File(ontologiesFolder, jobId + "."
+					File ontologyFile = new File(ontologiesFolder, ontId + "."
 							+ "rdf");
-					ontModel.write(new FileOutputStream(ontologyFile));
+					data.write(new FileOutputStream(ontologyFile));
+					g.add(new TripleImpl(
+							jobIRI,
+							new IRI(HAS_ONTOLOGY_SOURCE),
+							new IRI(ONTOLOGY + jobId + "/source")));
 					
-					
-					
+					log.debug("Writing ontology {} - {}", ontologyName, ontId);
 					/*
 					 * Ontology IRI
 					 */
@@ -575,6 +604,68 @@ public class IndexingJob implements Job {
 		
 	}
 	
+	private List<Statement> getSynonyms(Property property, Model model){
+		
+		List<Statement> stmts = new ArrayList<Statement>();
+		
+		Site wnSite = siteManager.getSite(Constants.wordNetSiteID);
+		
+		FieldQuery fieldQuery = DefaultQueryFactory.getInstance().createFieldQuery();
+		fieldQuery.addSelectedField(property.getURI());
+		fieldQuery.setOffset(0);
+		fieldQuery.setLimit(3);
+		
+		Model synonymityModel = ModelFactory.createDefaultModel();
+		
+		StmtIterator labelIt = model.listStatements(null, property, (RDFNode)null);
+		labelIt.forEachRemaining(stmt -> {
+			
+			
+			Resource subject = stmt.getSubject();
+			RDFNode object = stmt.getObject();
+			if(object.isLiteral()){
+				String label = ((Literal)object).getLexicalForm();
+				Constraint similarityConstraint = new SimilarityConstraint(label, null);
+				fieldQuery.setConstraint(property.getURI(), similarityConstraint);
+				
+				// Add label as synonym
+				synonymityModel.add(subject, synonym, object);
+				
+				QueryResultList<Representation> result = wnSite.find(fieldQuery);
+				result.forEach(representation -> {
+					
+					float[] score = new float[]{0};
+					Iterator<Object> objIt = representation.get(Constants.entityHubScore);
+					if(objIt != null){
+						objIt.forEachRemaining(obj -> {
+							score[0] = (float) obj;
+						});
+					}
+					
+					if(score[0] > Constants.wordnetSynonymityConfidence){
+						objIt = representation.get(property.getURI());
+						if(objIt != null){
+							objIt.forEachRemaining(obj -> {
+								Text text = (Text) obj;
+								String value = text.getText();
+								String lang = text.getLanguage();
+								
+								// Add labels of synomyms
+								Literal synLabel = ResourceFactory.createLangLiteral(value, lang);
+								stmts.add(new StatementImpl(subject, synonym, synLabel));
+							});
+						}
+					}
+					
+				});
+				
+				
+			}
+			
+		});
+		
+		return stmts;
+	}
 	
 
 	@Override

@@ -71,6 +71,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyInfo;
+import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
 import it.cnr.istc.stlab.ontonethub.web.utils.JerseyUtils;
 
 @Component
@@ -82,8 +83,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	private Logger log = LoggerFactory.getLogger(getClass());
 	
 	/**
-     * The Field used for find requests if not specified TODO: Will be depreciated as soon as EntityQuery is
-     * implemented
+     * The Field used for find requests if not specified
      */
     private static final String DEFAULT_FIND_FIELD = RDFS.label.getUnicodeString();
 
@@ -100,7 +100,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
     private NamespacePrefixService nsPrefixService;
 	
 	@Reference
-    private SiteManager referencedSiteManager;
+    private OntoNetHubSiteManager referencedSiteManager;
 	
 	@Reference
 	private OntoNetHub ontonetHub;
@@ -237,7 +237,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
      * @param headers the request headers
      * @return the response (results of error)
      */
-    private Response executeQuery(SiteManager manager,
+    private Response executeQuery(OntoNetHubSiteManager manager,
                                   FieldQuery query, MediaType mediaType, String lang, 
                                   HttpHeaders headers) throws WebApplicationException {
     	/*

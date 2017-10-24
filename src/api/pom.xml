@@ -65,7 +65,10 @@
 					<Embed-Dependency>
 						guava,
 						protobuf-java,
-						cal10n-api;scope=compile|runtime
+						cal10n-api,
+						lucene-core,
+						lucene-analyzers-common,
+						lucene-queryparser;scope=compile|runtime
 					</Embed-Dependency>
 					<Embed-Transitive>true</Embed-Transitive>
 					<!-- Bundle-ClassPath>.,
@@ -213,18 +216,6 @@
   	  <version>1.0.0</version>
 	</dependency>
 	
-	<!-- Stanbol Web -->
-	<dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.commons.web.base</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.commons.web.viewable</artifactId>
-      <version>1.0.0</version>      
-    </dependency>
-
 	<!-- Stanbol Entityhub -->
 	<dependency>
       <groupId>org.apache.stanbol</groupId>
@@ -241,31 +232,6 @@
       <artifactId>org.apache.stanbol.entityhub.ldpath</artifactId>
       <version>1.0.0</version>
     </dependency> 
-    <!-- dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.entityhub.indexing.core</artifactId>
-      <version>1.0.0</version>
-    </dependency>    
-    <dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.entityhub.indexing.destination.solryard</artifactId>
-      <version>1.0.0</version>
-    </dependency>    
-    <dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.entityhub.yard.solr</artifactId>
-      <version>1.0.0</version>
-    </dependency --> 
-    
-       
-    <!-- jersey-media-multipart -->
-	<dependency>
-      <groupId>org.glassfish.jersey.media</groupId>
-      <artifactId>jersey-media-multipart</artifactId>
-      <version>2.7</version>
-    </dependency>
-    
-    
     
     <!-- Jettison -->
 	<dependency>
@@ -279,13 +245,6 @@
 	  <groupId>com.fasterxml.jackson.core</groupId>
 	  <artifactId>jackson-databind</artifactId>
 	  <version>2.6.3</version>
-	</dependency>
-	
-	<!-- Ccommons fileupload -->
-	<dependency>
-      <groupId>commons-fileupload</groupId>
-      <artifactId>commons-fileupload</artifactId>
-      <version>1.3.1</version>
 	</dependency>
 	
 	<!--  Apache Jena ARQ -->
@@ -327,19 +286,25 @@
       <version>0.8.1</version>
 	</dependency>
 	
-	
-	
-	<!-- Ontology Manager -->
+	<!-- Lucene
 	<dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.ontologymanager.servicesapi</artifactId>
-      <version>1.0.0</version>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-core</artifactId>
+      <version>7.1.0</version>
 	</dependency>
 	<dependency>
-      <groupId>org.apache.stanbol</groupId>
-      <artifactId>org.apache.stanbol.ontologymanager.sources.owlapi</artifactId>
-      <version>1.0.0</version>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-analyzers-common</artifactId>
+      <version>7.1.0</version>
 	</dependency>
+	<dependency>
+      <groupId>org.apache.lucene</groupId>
+      <artifactId>lucene-queryparser</artifactId>
+      <version>7.1.0</version>
+	</dependency -->
+	
+	
+	
 	
 	
   </dependencies>
