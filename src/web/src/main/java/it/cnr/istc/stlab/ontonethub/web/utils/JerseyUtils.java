@@ -208,14 +208,18 @@ public final class JerseyUtils {
         }
         if (language == null || language.trim().isEmpty()) {
             query.setConstraint(field, new TextConstraint(name, PatternType.wildcard, false));
-            
+            /*
             Constraint similarityConstraint = new SimilarityConstraint(name, null);
             query.setConstraint(field, similarityConstraint);
+            */
         } else {
+        	/*
         	List<String> labels = Lists.newArrayList(name);
         	List<String> languages = Lists.newArrayList(language);
         	Constraint similarityConstraint = new SimilarityConstraint(labels, languages);
             query.setConstraint(field, similarityConstraint);
+            */
+        	query.setConstraint(field, new TextConstraint(name, PatternType.wildcard, false, language));
         }
         if (limit != null && limit > 0) {
             query.setLimit(limit);
