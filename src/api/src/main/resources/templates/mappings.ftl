@@ -56,7 +56,7 @@ http://dati.gov.it/onto/ann-voc/ontologyComment
 http://dati.gov.it/onto/ann-voc/synonym
 http://dati.gov.it/onto/ann-voc/definedInOntology | d=entityhub:ref
 
-http://dati.gov.it/onto/ann-voc/synonym > rdfs:label
+# http://dati.gov.it/onto/ann-voc/synonym > rdfs:label
 
 #If one likes to also index ontologies one should add the following statements
 #owl:*

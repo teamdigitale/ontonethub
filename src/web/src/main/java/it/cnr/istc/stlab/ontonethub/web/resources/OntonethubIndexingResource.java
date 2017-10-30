@@ -112,7 +112,8 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
      * The Field used for find requests if not specified TODO: This will be replaced by the EntitySearch. With
      * this search the Site is responsible to decide what properties to use for label based searches.
      */
-    private static final String DEFAULT_FIND_FIELD = RDFS.label.getUnicodeString();
+    private static final String DEFAULT_FIND_FIELD = "http://dati.gov.it/onto/ann-voc/synonym";
+    private static final String DEFAULT_SELECTED_FIELD = RDFS.label.getUnicodeString();
     
     /**
      * The Field used as default as selected fields for find requests TODO: Make configurable via the
@@ -372,7 +373,7 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
 	            }
 	        }
 	        return executeQuery(site, createFieldQueryForFindRequest(
-	                name, property, language,
+	                name, DEFAULT_SELECTED_FIELD, property, language,
 	                limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, 
 	                offset,ldpath),
 	            headers);

@@ -85,7 +85,8 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	/**
      * The Field used for find requests if not specified
      */
-    private static final String DEFAULT_FIND_FIELD = RDFS.label.getUnicodeString();
+    private static final String DEFAULT_FIND_FIELD = "http://dati.gov.it/onto/ann-voc/synonym"; 
+    private static final String DEFAULT_SELECTED_FIELD = RDFS.label.getUnicodeString();
 
     /**
      * The default number of maximal results of searched sites.
@@ -214,8 +215,9 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         if(ldpath != null && !ldpath.isEmpty()) ldpathQuery += ldpath;
         	*/
         
-        FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(name, property, language,
+        FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(name, DEFAULT_SELECTED_FIELD, property, language,
             limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, offset, ldpathQuery);
+        
         return executeQuery(referencedSiteManager, query, acceptedMediaType, language, headers);
     }
 	

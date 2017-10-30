@@ -166,7 +166,9 @@ public final class JerseyUtils {
      * @throws IllegalArgumentException in case the parsed field is invalid. Callers
      * of this method need to ensure that this parameter is set to an valid value.
      */
-    public static FieldQuery createFieldQueryForFindRequest(String name, String field, 
+    public static FieldQuery createFieldQueryForFindRequest(String name, 
+    														String selectedField,
+    														String field,
                                                             String language, Integer limit, 
                                                             Integer offset, String ldpath) throws WebApplicationException, IllegalArgumentException{
         if(name == null || name.trim().isEmpty()){
@@ -203,7 +205,7 @@ public final class JerseyUtils {
         } else { //if no LDPath is parsed select the default field
             query = queryFactory.createFieldQuery();
             Collection<String> selectedFields = new ArrayList<String>();
-            selectedFields.add(field); //select also the field used to find entities
+            selectedFields.add(selectedField); //select also the field used to find entities
             query.addSelectedFields(selectedFields);
         }
         if (language == null || language.trim().isEmpty()) {

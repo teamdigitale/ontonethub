@@ -34,6 +34,9 @@ import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.DC;
 import org.apache.clerezza.rdf.ontologies.XSD;
 import org.apache.commons.io.FileUtils;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.it.ItalianAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.stanbol.commons.jobs.api.Job;
 import org.apache.stanbol.commons.jobs.api.JobResult;
 import org.apache.stanbol.commons.jobs.impl.JobManagerImpl;
@@ -617,6 +620,7 @@ public class IndexingJob implements Job {
 		
 		Model synonymityModel = ModelFactory.createDefaultModel();
 		
+		
 		StmtIterator labelIt = model.listStatements(null, property, (RDFNode)null);
 		labelIt.forEachRemaining(stmt -> {
 			
@@ -625,11 +629,14 @@ public class IndexingJob implements Job {
 			RDFNode object = stmt.getObject();
 			if(object.isLiteral()){
 				String label = ((Literal)object).getLexicalForm();
+				label = lemmatize(label);
 				Constraint similarityConstraint = new SimilarityConstraint(label, null);
 				fieldQuery.setConstraint(property.getURI(), similarityConstraint);
 				
 				// Add label as synonym
 				synonymityModel.add(subject, synonym, object);
+				
+				final String lab = label;
 				
 				QueryResultList<Representation> result = wnSite.find(fieldQuery);
 				result.forEach(representation -> {
@@ -651,6 +658,7 @@ public class IndexingJob implements Job {
 								String lang = text.getLanguage();
 								
 								// Add labels of synomyms
+								log.debug("Syn {} ({}) - {} : {}", subject, lab, value, score);
 								Literal synLabel = ResourceFactory.createLangLiteral(value, lang);
 								stmts.add(new StatementImpl(subject, synonym, synLabel));
 							});
@@ -672,6 +680,38 @@ public class IndexingJob implements Job {
 	public String buildResultLocation(String jobId) {
 		
 		return "ontonethub/ontology/" + jobId;
+	}
+	
+	
+	
+	private String lemmatize(String query) {
+		ItalianAnalyzer analyzer = new ItalianAnalyzer();
+		TokenStream tokenStream = analyzer.tokenStream("label", query);
+		
+		
+		StringBuilder sb = new StringBuilder();
+		CharTermAttribute token = tokenStream.getAttribute(CharTermAttribute.class);
+		try {
+	    	tokenStream.reset();
+			while (tokenStream.incrementToken()) {
+			    if (sb.length() > 0) {
+			        sb.append(" ");
+			    }
+			    sb.append(token.toString());
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return sb.toString();
+				
+		/*
+		analyzer.getStopwordSet().forEach(c -> {
+			char[] carray = (char[])c;
+			System.out.println(new String(carray));
+		});
+		*/
 	}
 
 }
