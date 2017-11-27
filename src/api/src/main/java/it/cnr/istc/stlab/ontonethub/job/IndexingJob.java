@@ -34,10 +34,6 @@ import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.DC;
 import org.apache.clerezza.rdf.ontologies.XSD;
 import org.apache.commons.io.FileUtils;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.it.ItalianAnalyzer;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.stanbol.commons.jobs.api.Job;
 import org.apache.stanbol.commons.jobs.api.JobResult;
 import org.apache.stanbol.commons.jobs.impl.JobManagerImpl;
 import org.apache.stanbol.entityhub.core.query.DefaultQueryFactory;
@@ -65,6 +61,13 @@ import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.ontology.OntProperty;
 import com.hp.hpl.jena.ontology.OntResource;
 import com.hp.hpl.jena.ontology.Ontology;
+import com.hp.hpl.jena.query.Query;
+import com.hp.hpl.jena.query.QueryExecution;
+import com.hp.hpl.jena.query.QueryExecutionFactory;
+import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.ResultSet;
+import com.hp.hpl.jena.query.ResultSetFormatter;
+import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -76,9 +79,11 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
+import com.hp.hpl.jena.util.FileManager;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDFS;
+import com.ibm.icu.util.BytesTrie.Result;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -98,7 +103,7 @@ import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
  *
  */
 
-public class IndexingJob implements Job {
+public class IndexingJob extends AbstractIndexingJob {
 	
 	private String ontologyID, ontologyName, ontologyDescription, baseURI;
 	private Model data;
@@ -297,6 +302,14 @@ public class IndexingJob implements Job {
 			 * Add synonyms gathered from WordNet.
 			 */
 			ontModel.add(getSynonyms(RDFS.label, ontModel));
+			/*
+			 * Add synonyms from super classes.
+			 */
+			ontModel.add(expandSubClasses(ontModel));
+			/*
+			 * Add synonyms from super classes.
+			 */
+			ontModel.add(expandSubProperties(ontModel));
 			
 			ontModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 			
@@ -608,70 +621,119 @@ public class IndexingJob implements Job {
 	}
 	
 	private List<Statement> getSynonyms(Property property, Model model){
+		List<Statement> stmts = new ArrayList<Statement>();
+		try{
+			
+			Site wnSite = siteManager.getSite(Constants.wordNetSiteID);
+			
+			FieldQuery fieldQuery = DefaultQueryFactory.getInstance().createFieldQuery();
+			fieldQuery.addSelectedField(property.getURI());
+			fieldQuery.setOffset(0);
+			fieldQuery.setLimit(3);
+			
+			StmtIterator labelIt = model.listStatements(null, property, (RDFNode)null);
+			labelIt.forEachRemaining(stmt -> {
+				
+				Resource subject = stmt.getSubject();
+				RDFNode object = stmt.getObject();
+				if(object.isLiteral()){
+					String label = ((Literal)object).getLexicalForm();
+					String lang = ((Literal)object).getLanguage();
+					if(lang == null || lang.equals("it")){
+						label = lemmatize(label);
+						Constraint similarityConstraint = new SimilarityConstraint(label, null);
+						fieldQuery.setConstraint(property.getURI(), similarityConstraint);
+						
+						/* Add label as synonym.
+						 * But first we lemmatise the term in order to increase the recall.
+						 */
+						
+						Literal objLiteral = null;
+						if(lang != null) objLiteral = ResourceFactory.createLangLiteral(label, lang);
+						else objLiteral = ResourceFactory.createPlainLiteral(label);
+						
+						stmts.add(new StatementImpl(subject, synonym, objLiteral));
+						
+						final String lab = label;
+						
+						QueryResultList<Representation> result = wnSite.find(fieldQuery);
+						
+						result.forEach(representation -> {
+							
+							float[] score = new float[]{0};
+							Iterator<Object> objIt = representation.get(Constants.entityHubScore);
+							if(objIt != null){
+								objIt.forEachRemaining(obj -> {
+									score[0] = (float) obj;
+								});
+							}
+							
+							if(score[0] > Constants.wordnetSynonymityConfidence){
+								objIt = representation.get(property.getURI());
+								if(objIt != null){
+									objIt.forEachRemaining(obj -> {
+										Text text = (Text) obj;
+										String value = text.getText();
+										String language = text.getLanguage();
+										
+										// Add labels of synomyms
+										log.debug("Syn {} ({}) - {} : {}", subject, lab, value, score);
+										Literal synLabel = ResourceFactory.createLangLiteral(lemmatize(value), language);
+										stmts.add(new StatementImpl(subject, synonym, synLabel));
+									});
+								}
+							}
+							
+						});
+						
+					}
+					
+				}
+				
+			});
+		} catch(Exception e){
+			log.error(e.getMessage(), e);
+		}
 		
+		return stmts;
+	}
+	
+	private List<Statement> expandSubClasses(Model model){
 		List<Statement> stmts = new ArrayList<Statement>();
 		
-		Site wnSite = siteManager.getSite(Constants.wordNetSiteID);
 		
-		FieldQuery fieldQuery = DefaultQueryFactory.getInstance().createFieldQuery();
-		fieldQuery.addSelectedField(property.getURI());
-		fieldQuery.setOffset(0);
-		fieldQuery.setLimit(3);
+		String sparql = "PREFIX rdfs: <" + RDFS.getURI() + ">"
+				+ "SELECT DISTINCT ?class ?synonym "
+				+ "WHERE { "
+				+ "?class rdfs:subClassOf+ ?subClass . "
+				+ "?subClass <" + synonym + "> ?synonym"
+				+ "}";
 		
-		Model synonymityModel = ModelFactory.createDefaultModel();
-		
-		
-		StmtIterator labelIt = model.listStatements(null, property, (RDFNode)null);
-		labelIt.forEachRemaining(stmt -> {
-			
-			
-			Resource subject = stmt.getSubject();
-			RDFNode object = stmt.getObject();
-			if(object.isLiteral()){
-				String label = ((Literal)object).getLexicalForm();
-				label = lemmatize(label);
-				Constraint similarityConstraint = new SimilarityConstraint(label, null);
-				fieldQuery.setConstraint(property.getURI(), similarityConstraint);
-				
-				// Add label as synonym
-				synonymityModel.add(subject, synonym, object);
-				
-				final String lab = label;
-				
-				QueryResultList<Representation> result = wnSite.find(fieldQuery);
-				result.forEach(representation -> {
-					
-					float[] score = new float[]{0};
-					Iterator<Object> objIt = representation.get(Constants.entityHubScore);
-					if(objIt != null){
-						objIt.forEachRemaining(obj -> {
-							score[0] = (float) obj;
-						});
-					}
-					
-					if(score[0] > Constants.wordnetSynonymityConfidence){
-						objIt = representation.get(property.getURI());
-						if(objIt != null){
-							objIt.forEachRemaining(obj -> {
-								Text text = (Text) obj;
-								String value = text.getText();
-								String lang = text.getLanguage();
-								
-								// Add labels of synomyms
-								log.debug("Syn {} ({}) - {} : {}", subject, lab, value, score);
-								Literal synLabel = ResourceFactory.createLangLiteral(value, lang);
-								stmts.add(new StatementImpl(subject, synonym, synLabel));
-							});
-						}
-					}
-					
-				});
-				
-				
-			}
-			
+		Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+		QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+		ResultSet resultSet = queryExecution.execSelect();
+		resultSet.forEachRemaining(querySolution -> {
+			stmts.add(new StatementImpl(querySolution.getResource("class"), synonym, querySolution.getLiteral("synonym")));
 		});
+		return stmts;
+	}
+	
+	private List<Statement> expandSubProperties(Model model){
+		List<Statement> stmts = new ArrayList<Statement>();
 		
+		String sparql = "PREFIX rdfs: <" + RDFS.getURI() + ">"
+				+ "SELECT DISTINCT ?property ?synonym "
+				+ "WHERE { "
+				+ "?property rdfs:subPropertyOf+ ?subProperty . "
+				+ "?subProperty <" + synonym + "> ?synonym"
+				+ "}";
+		
+		Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+		QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+		ResultSet resultSet = queryExecution.execSelect();
+		resultSet.forEachRemaining(querySolution -> {
+			stmts.add(new StatementImpl(querySolution.getResource("property"), synonym, querySolution.getLiteral("synonym")));
+		});
 		return stmts;
 	}
 	
@@ -682,36 +744,5 @@ public class IndexingJob implements Job {
 		return "ontonethub/ontology/" + jobId;
 	}
 	
-	
-	
-	private String lemmatize(String query) {
-		ItalianAnalyzer analyzer = new ItalianAnalyzer();
-		TokenStream tokenStream = analyzer.tokenStream("label", query);
-		
-		
-		StringBuilder sb = new StringBuilder();
-		CharTermAttribute token = tokenStream.getAttribute(CharTermAttribute.class);
-		try {
-	    	tokenStream.reset();
-			while (tokenStream.incrementToken()) {
-			    if (sb.length() > 0) {
-			        sb.append(" ");
-			    }
-			    sb.append(token.toString());
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return sb.toString();
-				
-		/*
-		analyzer.getStopwordSet().forEach(c -> {
-			char[] carray = (char[])c;
-			System.out.println(new String(carray));
-		});
-		*/
-	}
 
 }

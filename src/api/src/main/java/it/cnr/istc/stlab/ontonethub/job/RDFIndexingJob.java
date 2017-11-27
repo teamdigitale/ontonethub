@@ -14,7 +14,6 @@ import java.util.Properties;
 
 import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.commons.io.FileUtils;
-import org.apache.stanbol.commons.jobs.api.Job;
 import org.apache.stanbol.commons.jobs.api.JobResult;
 import org.apache.stanbol.commons.jobs.impl.JobManagerImpl;
 import org.osgi.framework.Bundle;
@@ -35,6 +34,7 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
+import com.hp.hpl.jena.vocabulary.RDFS;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -51,7 +51,7 @@ import it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl;
  *
  */
 
-public class RDFIndexingJob implements Job {
+public class RDFIndexingJob extends AbstractIndexingJob {
 	
 	public static final String JOB_NS = "http://dati.gov.it/onto/job/";
 	
@@ -86,113 +86,142 @@ public class RDFIndexingJob implements Job {
 
 	@Override
 	public JobResult call() throws Exception {
-		Configuration cfg = new Configuration();
-		
-		TemplateLoader loader = new ClassTemplateLoader(getClass(), File.separator + "templates");
-		cfg.setTemplateLoader(loader);
-	    cfg.setDefaultEncoding("UTF-8");
-        cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
-        
-		Properties props = new Properties();
-		props.setProperty("name", ontologyName);
-		props.setProperty("description", ontologyDescription);
-		
-		boolean error = false;
-		String errorMessage = null; 
-		Template template;
-		File tempFolder = null;
-		
-		try {
-			File folder = new File(stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES_FOLDER);
-			String tempFolderName = "_" + System.currentTimeMillis();
-			tempFolder = new File(folder, tempFolderName);
-			
-			Process initProcess = Runtime.getRuntime().exec("java -jar " + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " init " + tempFolder.getPath());
-			initProcess.waitFor();
-			
-			template = cfg.getTemplate("indexing.ftl");
-			File configFolder = new File(tempFolder, "indexing" + File.separator + "config");
-			Writer writer = new FileWriter(new File(configFolder, "indexing.properties"));
-			template.process(props, writer);
-			writer.close();
-			
-			template = cfg.getTemplate("mappings.ftl");
-			writer = new FileWriter(new File(configFolder, "mappings.txt"));
-			template.process(props, writer);
-			writer.close();
-			
-			
-			template = cfg.getTemplate("namespaceprefix.ftl");
-			writer = new FileWriter(new File(configFolder, "namespaceprefix.mappings"));
-			template.process(props, writer);
-			writer.close();
-			
-			
-		} catch (ParseException e) {
-			log.error(e.getMessage(), e);
-			errorMessage = "Indexing failed because of the following error: " + e.getMessage();
-			error = true;
-		} catch (IOException e) {
-			log.error(e.getMessage(), e);
-			errorMessage = "Indexing failed because of the following error: " + e.getMessage();
-			error = true;
-		} catch (TemplateException e) {
-			log.error(e.getMessage(), e);
-			errorMessage = "Indexing failed because of the following error: " + e.getMessage();
-			error = true;
-		}
-		
-		log.info("Executint job index for {} is error? {}", ontologyName, error);
-		
 		IndexingJobResult indexingJobResult = null;
-		if(!error){
-			String jobId = JobManagerImpl.buildId(this);
+		try{
+			Configuration cfg = new Configuration();
 			
-			File rdfDataFolder = new File(tempFolder, "indexing" + File.separator + "resources" + File.separator + "rdfdata");
+			TemplateLoader loader = new ClassTemplateLoader(getClass(), File.separator + "templates");
+			cfg.setTemplateLoader(loader);
+		    cfg.setDefaultEncoding("UTF-8");
+	        cfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
+	        
+			Properties props = new Properties();
+			props.setProperty("name", ontologyName);
+			props.setProperty("description", ontologyDescription);
 			
-			String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
+			boolean error = false;
+			String errorMessage = null; 
+			Template template;
+			File tempFolder = null;
 			
-			data.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
-			
-			Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
-			indexingProcess.waitFor();
-			
-			
-			String bundleFileName = bundleNamePattern.replace("{$name}", ontologyName);
-			File bundleFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  bundleFileName);
-			
-			String zippedIndexFileName = zippedIndexNamePattern.replace("{$name}", ontologyName);
-			File zippedIndexFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  zippedIndexFileName);
-			
-			log.info("bundleFile {} AND zippedIndexFile {}", bundleFile.exists(), zippedIndexFile.exists());
-			if(bundleFile.exists() && zippedIndexFile.exists()){
+			try {
+				File folder = new File(stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES_FOLDER);
+				String tempFolderName = "_" + System.currentTimeMillis();
+				tempFolder = new File(folder, tempFolderName);
 				
-				File stanbolDatafiles = new File(stanbolHome + File.separator + "datafiles");
-				File deployedIndex = new File(stanbolDatafiles, zippedIndexFileName);
-				Files.copy(zippedIndexFile, deployedIndex);
+				Process initProcess = Runtime.getRuntime().exec("java -jar " + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " init " + tempFolder.getPath());
+				initProcess.waitFor();
 				
-				try{
-					log.info("Bundle URI: {} - URL: {}", bundleFile.toURI(), bundleFile.toURI().toURL());
-					Bundle bundle = ctx.installBundle(bundleFile.toURI().toString());
-					bundle.start();
-					
-				} catch(Exception e){
-					log.error(e.getMessage(), e);
-				}
+				template = cfg.getTemplate("indexing.ftl");
+				File configFolder = new File(tempFolder, "indexing" + File.separator + "config");
+				Writer writer = new FileWriter(new File(configFolder, "indexing.properties"));
+				template.process(props, writer);
+				writer.close();
 				
-				
-				
+				template = cfg.getTemplate("mappings.ftl");
+				writer = new FileWriter(new File(configFolder, "mappings.txt"));
+				template.process(props, writer);
+				writer.close();
 				
 				
+				template = cfg.getTemplate("namespaceprefix.ftl");
+				writer = new FileWriter(new File(configFolder, "namespaceprefix.mappings"));
+				template.process(props, writer);
+				writer.close();
+				
+				
+			} catch (ParseException e) {
+				log.error(e.getMessage(), e);
+				errorMessage = "Indexing failed because of the following error: " + e.getMessage();
+				error = true;
+			} catch (IOException e) {
+				log.error(e.getMessage(), e);
+				errorMessage = "Indexing failed because of the following error: " + e.getMessage();
+				error = true;
+			} catch (TemplateException e) {
+				log.error(e.getMessage(), e);
+				errorMessage = "Indexing failed because of the following error: " + e.getMessage();
+				error = true;
 			}
 			
-			String message = "Indexing of " + ontologyName + " completed.";
-			indexingJobResult = new IndexingJobResult(message, true);
-		}
-		else indexingJobResult = new IndexingJobResult(errorMessage, false);
-		
-		if(tempFolder != null && tempFolder.exists()){
-			FileUtils.deleteDirectory(tempFolder);
+			log.info("Executint job index for {} is error? {}", ontologyName, error);
+			
+			
+			if(!error){
+				String jobId = JobManagerImpl.buildId(this);
+				
+				File rdfDataFolder = new File(tempFolder, "indexing" + File.separator + "resources" + File.separator + "rdfdata");
+				
+				String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
+				
+				
+				StmtIterator labelIt = data.listStatements(null, RDFS.label, (RDFNode)null);
+				List<Statement> labelStmts = new ArrayList<Statement>();
+				List<Statement> removingStmts = new ArrayList<Statement>();
+				labelIt.forEachRemaining(stmt -> {
+					Resource subj = stmt.getSubject();
+					Property pred = stmt.getPredicate();
+					RDFNode obj = stmt.getObject();
+					if(obj.isLiteral()){
+						Literal objLit = (Literal) obj;
+						String lexicalForm = objLit.getLexicalForm();
+						String lang = objLit.getLanguage();
+						
+						String lemmatizedLexicalForm = lemmatize(lexicalForm);
+						Literal lemmatizedLiteral = null;
+						if(lang != null) lemmatizedLiteral = ResourceFactory.createLangLiteral(lemmatizedLexicalForm, lang);
+						else lemmatizedLiteral = ResourceFactory.createPlainLiteral(lemmatizedLexicalForm);
+						
+						log.debug("Wordnet indexing term {}", lemmatizedLexicalForm);
+						labelStmts.add(new StatementImpl(subj, pred, lemmatizedLiteral));
+						removingStmts.add(stmt);
+					}
+				});
+				
+				data.remove(removingStmts);
+				data.add(labelStmts);
+				
+				data.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
+				
+				Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
+				indexingProcess.waitFor();
+				
+				
+				String bundleFileName = bundleNamePattern.replace("{$name}", ontologyName);
+				File bundleFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  bundleFileName);
+				
+				String zippedIndexFileName = zippedIndexNamePattern.replace("{$name}", ontologyName);
+				File zippedIndexFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  zippedIndexFileName);
+				
+				log.info("bundleFile {} AND zippedIndexFile {}", bundleFile.exists(), zippedIndexFile.exists());
+				if(bundleFile.exists() && zippedIndexFile.exists()){
+					
+					File stanbolDatafiles = new File(stanbolHome + File.separator + "datafiles");
+					File deployedIndex = new File(stanbolDatafiles, zippedIndexFileName);
+					Files.copy(zippedIndexFile, deployedIndex);
+					
+					try{
+						log.info("Bundle URI: {} - URL: {}", bundleFile.toURI(), bundleFile.toURI().toURL());
+						Bundle bundle = ctx.installBundle(bundleFile.toURI().toString());
+						bundle.start();
+						
+					} catch(Exception e){
+						log.error(e.getMessage(), e);
+					}
+					
+				}
+				
+				String message = "Indexing of " + ontologyName + " completed.";
+				indexingJobResult = new IndexingJobResult(message, true);
+			}
+			else indexingJobResult = new IndexingJobResult(errorMessage, false);
+			
+			if(tempFolder != null && tempFolder.exists()){
+				FileUtils.deleteDirectory(tempFolder);
+			}
+		} catch(Exception e){
+			log.error(e.getMessage(), e);
+			throw e;
 		}
 		
 		return indexingJobResult;
