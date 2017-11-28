@@ -27,11 +27,14 @@ import java.util.Set;
 
 import org.apache.clerezza.commons.rdf.Graph;
 import org.apache.clerezza.commons.rdf.IRI;
+import org.apache.clerezza.commons.rdf.Language;
+import org.apache.clerezza.commons.rdf.RDFTerm;
 import org.apache.clerezza.commons.rdf.impl.utils.PlainLiteralImpl;
 import org.apache.clerezza.commons.rdf.impl.utils.TripleImpl;
 import org.apache.clerezza.commons.rdf.impl.utils.TypedLiteralImpl;
 import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.DC;
+import org.apache.clerezza.rdf.ontologies.RDF;
 import org.apache.clerezza.rdf.ontologies.XSD;
 import org.apache.commons.io.FileUtils;
 import org.apache.stanbol.commons.jobs.api.JobResult;
@@ -66,7 +69,6 @@ import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.ResultSet;
-import com.hp.hpl.jena.query.ResultSetFormatter;
 import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
@@ -79,11 +81,10 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
-import com.hp.hpl.jena.util.FileManager;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
+import com.hp.hpl.jena.util.iterator.Filter;
 import com.hp.hpl.jena.vocabulary.OWL;
 import com.hp.hpl.jena.vocabulary.RDFS;
-import com.ibm.icu.util.BytesTrie.Result;
 
 import freemarker.cache.ClassTemplateLoader;
 import freemarker.cache.TemplateLoader;
@@ -460,6 +461,39 @@ public class IndexingJob extends AbstractIndexingJob {
 							jobIRI,
 							new IRI(IMPORTED_ONTOLOGIES),
 							new TypedLiteralImpl(String.valueOf(importedOntologies.size()), XSD.int_)));
+					
+					ontModel.listOntologies().forEachRemaining(ont -> {
+						ExtendedIterator<Statement> stmts = ont.listProperties().filterDrop(new Filter<Statement>() {
+							
+							@Override
+							public boolean accept(Statement o) {
+								return o.getPredicate().equals(RDF.type) ? true : false;
+							}
+						});
+						
+						stmts.forEachRemaining(stmt -> {
+							RDFNode objectNode = stmt.getObject();
+							RDFTerm objectTerm = null;
+							if(objectNode.isResource()) objectTerm = new IRI(((Resource)objectNode).getURI());
+							else{
+								Literal objectLiteral = (Literal)objectNode;
+								String lexicalForm = objectLiteral.getLexicalForm();
+								String type = objectLiteral.getDatatypeURI();
+								if(type != null) objectTerm = new TypedLiteralImpl(lexicalForm, new IRI(type));
+								else{
+									String language = objectLiteral.getLanguage();
+									if(language != null) objectTerm = new PlainLiteralImpl(lexicalForm, new Language(language));
+									else new PlainLiteralImpl(lexicalForm);
+								}
+							}
+							
+							g.add(new TripleImpl(
+									jobIRI,
+									new IRI(stmt.getPredicate().getURI()),
+									objectTerm));
+									
+						});
+					});
 					
 					
 				} catch(Exception e){

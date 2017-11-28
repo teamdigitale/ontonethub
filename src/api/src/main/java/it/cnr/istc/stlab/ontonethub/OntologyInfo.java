@@ -1,5 +1,9 @@
 package it.cnr.istc.stlab.ontonethub;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * 
  * @author Andrea Nuzzolese (https://github.com/anuzzolese)
@@ -18,9 +22,10 @@ public class OntologyInfo {
 	private int annotationProperties;
 	private int individuals;
 	private int importedOntologies;
+	private Map<String, List<String>> rdfMetadata;
 	
 	public OntologyInfo() {
-		
+		rdfMetadata = new HashMap<String, List<String>>();
 	}
 	
 	
@@ -95,5 +100,12 @@ public class OntologyInfo {
 		this.importedOntologies = importedOntologies;
 	}
 	
+	public Map<String, List<String>> getRdfMetadata() {
+		return rdfMetadata;
+	}
+	
+	public void setRdfMetadata(Map<String, List<String>> rdfMetadata) {
+		this.rdfMetadata = rdfMetadata;
+	}
 	
 }

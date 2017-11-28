@@ -18,14 +18,17 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.clerezza.commons.rdf.BlankNodeOrIRI;
 import org.apache.clerezza.commons.rdf.Graph;
 import org.apache.clerezza.commons.rdf.IRI;
 import org.apache.clerezza.commons.rdf.Literal;
+import org.apache.clerezza.commons.rdf.RDFTerm;
 import org.apache.clerezza.commons.rdf.Triple;
 import org.apache.clerezza.rdf.core.access.EntityAlreadyExistsException;
 import org.apache.clerezza.rdf.core.access.TcManager;
@@ -428,6 +431,31 @@ public class OntoNetHubImpl implements OntoNetHub {
 				importedOntologies = Integer.valueOf(lexicalForm);
 			}
 			ontologyInfo.setImportedOntologies(importedOntologies);
+			
+			
+			/*
+			 * All map
+			 */
+			tripleIt = g.filter(new IRI(ontologyURI), 
+					null, 
+					null);
+			Map<String, List<String>> map = new HashMap<String, List<String>>();
+			while(tripleIt.hasNext()){
+				Triple triple = tripleIt.next();
+				IRI predicate = triple.getPredicate();
+				String predicateString = predicate.toString().replace("<", "").replace(">", "");
+				List<String> values = map.get(predicateString);
+				if(values == null){
+					values = new ArrayList<String>();
+					map.put(predicateString, values);
+				}
+				RDFTerm objectTerm = triple.getObject();
+				String value = null;
+				if(objectTerm instanceof IRI) value = ((IRI)objectTerm).toString().replace("<", "").replace(">", "");
+				else value = ((Literal)objectTerm).getLexicalForm();
+				values.add(value);
+			}
+			ontologyInfo.setRdfMetadata(map);
 			
 			
 		}
