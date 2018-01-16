@@ -111,6 +111,16 @@ curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "acc
 ```
 In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to `http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find`, where `ontologyID` has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.
 
+Furthermore, it is possible to retrieve the context associated with a certain ontology entity. By context we mean the RDF representation of an entity, which is:
+ - the inferred domain of a property, in case the entity is the latter property is the object of the context we are looking for; 
+ - the inferred domain of a property having a certain class as range, in case the latter class is the object of the context we are looking for.
+
+The following is an example of a curl request that looks for the context for the entity http://dati.gov.it/onto/smapit/emailAddress.
+```
+curl -X GET -H "Accept: application/json" 'http://localhost:8080/stanbol/ontonethub/ontologies/context?id=http://dati.gov.it/onto/smapit/emailAddress&lang=it' 
+```
+In such a request the parameter `id` identifies the entity and the parameter `lang` allows to retrieve literals, which are associated with the found context and defined in a specific language.
+
 ### Compiling from source code
 The OnteNetHub is released along with the source code, which is available in the folder `ontonethub-src`. The source code is written in Java and can be built by using [`Maven`](https://maven.apache.org/). The following command can be used for bulding the source code if executed by command line from the root of the `ontonethub-src` folder:
 ```
