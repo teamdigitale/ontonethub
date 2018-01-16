@@ -30,11 +30,13 @@ public class OntologyDescriptionVocabulary {
 	public static String INDIVIDUALS = NS + "individuals";
 	public static String IMPORTED_ONTOLOGIES = NS + "importedOntologies";
 	public static String SYNONYM = NS + "synonym";
+	public static String USAGE = NS + "usage";
 	
 	public static Property domainClassLabel = ResourceFactory.createProperty(DOMAIN_CLASS_LABEL);
 	public static Property domainClassComment = ResourceFactory.createProperty(DOMAIN_CLASS_COMMENT);
 	public static Property ontologyLabel = ResourceFactory.createProperty(ONTOLOGY_LABEL);
 	public static Property ontologyComment = ResourceFactory.createProperty(ONTOLOGY_COMMENT);
 	public static Property synonym = ResourceFactory.createProperty(SYNONYM);
+	public static Property usage = ResourceFactory.createProperty(USAGE);
 	
 }

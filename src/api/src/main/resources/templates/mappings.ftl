@@ -55,6 +55,7 @@ http://dati.gov.it/onto/ann-voc/ontologyLabel
 http://dati.gov.it/onto/ann-voc/ontologyComment
 http://dati.gov.it/onto/ann-voc/synonym
 http://dati.gov.it/onto/ann-voc/definedInOntology | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/usage | d=entityhub:ref
 
 # http://dati.gov.it/onto/ann-voc/synonym > rdfs:label
 

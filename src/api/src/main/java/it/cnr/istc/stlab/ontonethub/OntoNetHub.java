@@ -1,7 +1,10 @@
 package it.cnr.istc.stlab.ontonethub;
 
+import java.util.Collection;
+
 import org.apache.stanbol.commons.jobs.api.Job;
 import org.apache.stanbol.entityhub.servicesapi.Entityhub;
+import org.apache.stanbol.entityhub.servicesapi.model.Representation;
 import org.apache.stanbol.entityhub.servicesapi.site.ManagedSite;
 
 import com.hp.hpl.jena.rdf.model.Model;
@@ -77,5 +80,7 @@ public interface OntoNetHub {
 	 * @throws NoSuchOntologyException
 	 */
 	void deleteOntologyIndex(String id) throws UnmappableOntologyException, NoSuchOntologyException;
+	
+	Collection<Representation> getOntologyEntityContext(String entityID, String lang);
 
 }

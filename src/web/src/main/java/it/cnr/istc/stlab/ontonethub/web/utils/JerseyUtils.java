@@ -39,7 +39,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -50,22 +49,22 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.MessageBodyReader;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.it.ItalianAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.util.Version;
 import org.apache.stanbol.commons.web.base.utils.MediaTypeUtil;
 import org.apache.stanbol.entityhub.core.query.DefaultQueryFactory;
 import org.apache.stanbol.entityhub.ldpath.query.LDPathFieldQueryImpl;
 import org.apache.stanbol.entityhub.servicesapi.model.Entity;
 import org.apache.stanbol.entityhub.servicesapi.model.Representation;
-import org.apache.stanbol.entityhub.servicesapi.query.Constraint;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQueryFactory;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
-import org.apache.stanbol.entityhub.servicesapi.query.SimilarityConstraint;
 import org.apache.stanbol.entityhub.servicesapi.query.TextConstraint;
 import org.apache.stanbol.entityhub.servicesapi.query.TextConstraint.PatternType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.Lists;
 
 /**
  * Utility methods used by several of the RESTful service endpoints of the
@@ -427,5 +426,34 @@ public final class JerseyUtils {
         }
         return form;
     }
+    
+    public static String lemmatize(String query) {
+    	StringBuilder sb = new StringBuilder();
+    	
+		ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_44);
+		TokenStream tokenStream;
+		try {
+			tokenStream = analyzer.tokenStream("label", query);
+			
+			CharTermAttribute token = tokenStream.getAttribute(CharTermAttribute.class);
+			
+	    	tokenStream.reset();
+			while (tokenStream.incrementToken()) {
+			    if (sb.length() > 0) {
+			        sb.append(" ");
+			    }
+			    sb.append(token.toString());
+			}
+			
+			analyzer.close();
+		} catch (IOException e) {
+			log.error(e.getMessage(), e);
+			sb = new StringBuilder();
+			sb.append(query);
+		}
+		
+		
+		return sb.toString();
+	}
     
 }

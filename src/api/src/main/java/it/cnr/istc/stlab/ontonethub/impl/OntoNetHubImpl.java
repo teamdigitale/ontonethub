@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +40,11 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.stanbol.commons.jobs.api.JobManager;
+import org.apache.stanbol.entityhub.core.model.InMemoryValueFactory;
+import org.apache.stanbol.entityhub.servicesapi.model.Entity;
+import org.apache.stanbol.entityhub.servicesapi.model.Representation;
+import org.apache.stanbol.entityhub.servicesapi.model.Text;
+import org.apache.stanbol.entityhub.servicesapi.model.ValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.site.Site;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleException;
@@ -274,6 +280,74 @@ public class OntoNetHubImpl implements OntoNetHub {
 		else return ontologyInfo;
 	}
 	
+	@Override
+	public Collection<Representation> getOntologyEntityContext(String entityID, String lang){
+		
+		Collection<Representation> transformedResults = new ArrayList<Representation>();
+		Entity entity = siteManager.getEntity(entityID);
+		if(entity != null){
+			Representation representation = entity.getRepresentation();
+			if(representation != null){
+				Iterator<Object> it = representation.get("http://dati.gov.it/onto/ann-voc/usage");
+				while(it.hasNext()){
+					Object context = it.next();
+					if(context instanceof org.apache.stanbol.entityhub.servicesapi.model.Reference){
+						org.apache.stanbol.entityhub.servicesapi.model.Reference contextReference = 
+								(org.apache.stanbol.entityhub.servicesapi.model.Reference) context;
+						String reference = contextReference.getReference();
+						
+						Entity entityRef = siteManager.getEntity(reference);
+						
+				    	ValueFactory vf = InMemoryValueFactory.getInstance();
+				    	
+			    		Representation repr = entityRef.getRepresentation();
+			    		Representation newRepresentation = vf.createRepresentation(repr.getId());
+			    		
+			    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#label", "label", repr, newRepresentation, lang, vf);
+			    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#comment", "comment", representation, newRepresentation, lang, vf);
+			    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafLabel", "dafLabel", representation, newRepresentation, vf);
+			    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafId", "dafId", representation, newRepresentation, vf);
+			    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassLabel", "label.class", representation, newRepresentation, lang, vf);
+			    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassComment", "comment.class", representation, newRepresentation, lang, vf);
+			    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyLabel", "label.ontology", representation, newRepresentation, lang, vf);
+			    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyComment", "comment.ontology", representation, newRepresentation, lang, vf);
+			    		addObjectToRepresentation("http://stanbol.apache.org/ontology/entityhub/query#score", "score", representation, newRepresentation, vf);
+			    		
+			    		transformedResults.add(newRepresentation);
+						
+					}
+				}
+				
+			}
+		}
+		
+		return transformedResults;
+	}
+
+	private void addTextToRepresentation(String oldFieldName, 
+		String newFieldName, 
+		Representation oldRepresentation, 
+		Representation newRepresentation, String lang, ValueFactory vf){
+	Iterator<Text> it = oldRepresentation.get(oldFieldName, lang);
+	
+		if(it != null){
+			it.forEachRemaining(obj -> {
+				Text t = vf.createText(obj.getText(), lang);
+				newRepresentation.set(newFieldName, t);
+			});
+		}
+	}
+	
+	private void addObjectToRepresentation(String oldFieldName, 
+    		String newFieldName, 
+    		Representation oldRepresentation, 
+    		Representation newRepresentation, ValueFactory vf){
+    	Iterator<Object> it = oldRepresentation.get(oldFieldName);
+    	if(it != null)
+			it.forEachRemaining(obj -> {
+				newRepresentation.set(newFieldName, obj);
+			});
+    }
 	
 	@Override
 	public OntologyInfo[] getOntologiesInfo() {

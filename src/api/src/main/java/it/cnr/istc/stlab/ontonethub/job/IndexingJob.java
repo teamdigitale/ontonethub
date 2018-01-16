@@ -11,6 +11,7 @@ import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OBJECT_
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ONTOLOGY;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OWL_CLASSES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.synonym;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.usage;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -68,6 +69,7 @@ import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
 import com.hp.hpl.jena.query.QueryExecutionFactory;
 import com.hp.hpl.jena.query.QueryFactory;
+import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.Syntax;
 import com.hp.hpl.jena.rdf.model.Literal;
@@ -242,6 +244,13 @@ public class IndexingJob extends AbstractIndexingJob {
 				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.label, OntologyDescriptionVocabulary.ontologyLabel, ontClass, ontology));
 				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.comment, OntologyDescriptionVocabulary.ontologyComment, ontClass, ontology));
 				
+				/*
+				 * Add usage triples.
+				 */
+				List<Statement> usageStmts = getUsage(ontClass, ontModel);
+				statements.addAll(usageStmts);
+				
+				
 			}
 			
 			/*
@@ -251,11 +260,12 @@ public class IndexingJob extends AbstractIndexingJob {
 			statements.removeAll(statements);
 			
 			
-			ExtendedIterator<OntProperty> ontPropertyIt = ontModel.listAllOntProperties();
+			//ExtendedIterator<OntProperty> ontPropertyIt = ontModel.listAllOntProperties();
+			ExtendedIterator<DatatypeProperty> ontPropertyIt = ontModel.listDatatypeProperties();
 			while(ontPropertyIt.hasNext()){
 				OntProperty ontProperty = ontPropertyIt.next();
 				String localName = ontProperty.getLocalName();
-				
+				System.out.println("Prop " + ontProperty.getURI());
 				propCounter++;
 				OntResource domain = ontProperty.getDomain();
 				if(domain == null)
@@ -291,7 +301,31 @@ public class IndexingJob extends AbstractIndexingJob {
 				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.label, OntologyDescriptionVocabulary.domainClassLabel, ontProperty, domain));
 				statements.addAll(createStatements(com.hp.hpl.jena.vocabulary.RDFS.comment, OntologyDescriptionVocabulary.domainClassComment, ontProperty, domain));
 				
+				/*
+				 * Add usage triples.
+				 */
+				List<Statement> usageStmts = getUsage(ontProperty, ontModel);
+				statements.addAll(usageStmts);
+				
+				
 			}
+			
+			/*
+			 * We remove object properties.
+			 */
+			ExtendedIterator<ObjectProperty> objPropertyIt = ontModel.listObjectProperties();
+			
+			List<Statement> statementsToRemove = new ArrayList<Statement>();
+			while(objPropertyIt.hasNext()){
+				ObjectProperty objectProperty = objPropertyIt.next();
+				
+				StmtIterator stmtIterator = ontModel.listStatements(objectProperty, null, (RDFNode)null);
+				stmtIterator.forEachRemaining(stmt -> {
+					statementsToRemove.add(stmt);
+				});
+			}
+			
+			ontModel.remove(statementsToRemove);
 			
 			ontModel.add(statements);
 			statements.removeAll(statements);
@@ -482,7 +516,7 @@ public class IndexingJob extends AbstractIndexingJob {
 								if(type != null) objectTerm = new TypedLiteralImpl(lexicalForm, new IRI(type));
 								else{
 									String language = objectLiteral.getLanguage();
-									if(language != null) objectTerm = new PlainLiteralImpl(lexicalForm, new Language(language));
+									if(language != null && !language.isEmpty()) objectTerm = new PlainLiteralImpl(lexicalForm, new Language(language));
 									else new PlainLiteralImpl(lexicalForm);
 								}
 							}
@@ -776,6 +810,71 @@ public class IndexingJob extends AbstractIndexingJob {
 	public String buildResultLocation(String jobId) {
 		
 		return "ontonethub/ontology/" + jobId;
+	}
+	
+	private List<Statement> getUsage(Property property, Model model){
+		
+		List<Statement> stmts = new ArrayList<Statement>();
+		String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+				+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
+				+ "SELECT DISTINCT ?concept "
+				+ "WHERE{"
+				+ "  {<" + property.getURI() + "> rdfs:domain ?concept} "
+				+ "  UNION "
+				+ "  { "
+				+ "    ?concept rdfs:subClassOf|owl:equivalentClass ?restriction . "
+				+ "    ?restriction a owl:Restriction; "
+				+ "      owl:onProperty <" + property.getURI() + "> "
+				+ "  } "
+				+ "}";
+		Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+		QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+		
+		ResultSet resultSet = queryExecution.execSelect();
+		while(resultSet.hasNext()){
+			QuerySolution querySolution = resultSet.next();
+			Resource concept = querySolution.getResource("concept");
+			
+			stmts.add(new StatementImpl(property, usage, concept));
+		}
+		
+		return stmts;
+		
+	}
+	
+	private List<Statement> getUsage(OntClass ontClass, Model model){
+		List<Statement> stmts = new ArrayList<Statement>();
+		try{
+			String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+					+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
+					+ "SELECT DISTINCT ?concept "
+					+ "WHERE{"
+					+ "  {?prop rdfs:range <" + ontClass.getURI() + ">; "
+					+ "    rdfs:domain ?concept"
+					+ "  }"
+					+ "  UNION "
+					+ "  { "
+					+ "    ?concept rdfs:subClassOf|owl:equivalentClass ?restriction . "
+					+ "    ?restriction a owl:Restriction; "
+					+ "      ?p <" + ontClass.getURI() + "> "
+					+ "  } "
+					+ "}";
+			Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+			QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+			
+			ResultSet resultSet = queryExecution.execSelect();
+			while(resultSet.hasNext()){
+				QuerySolution querySolution = resultSet.next();
+				Resource concept = querySolution.getResource("concept");
+				
+				stmts.add(new StatementImpl(ontClass, usage, concept));
+			}
+		} catch(Exception e){
+			log.error(e.getMessage(), e);
+		}
+		
+		return stmts;
+		
 	}
 	
 

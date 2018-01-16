@@ -22,6 +22,7 @@ import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -131,6 +132,13 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         ResponseBuilder res = Response.ok();
         return res.build();
     }
+    
+    @OPTIONS
+    @Path("/context")
+    public Response handleCorsPreflightContext(@Context HttpHeaders headers){
+        ResponseBuilder res = Response.ok();
+        return res.build();
+    }
 	
 	@GET
 	@Consumes(MediaType.WILDCARD)
@@ -158,6 +166,14 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 		
 		
 		return Response.ok(array.toString()).build();
+	}
+	
+	@GET
+	@Path("/context")
+	public Response getContext(@QueryParam(value = "id") String id, @QueryParam(value = "lang") String lang){
+		Collection<Representation> representations = ontonetHub.getOntologyEntityContext(id, lang);
+		QueryResultList<Representation> queryResultList = new QueryResultListImpl<Representation>(null, representations, Representation.class);
+		return Response.ok(queryResultList).build();
 	}
 	
 	@POST
@@ -215,7 +231,8 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         if(ldpath != null && !ldpath.isEmpty()) ldpathQuery += ldpath;
         	*/
         
-        FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(name, DEFAULT_SELECTED_FIELD, property, language,
+        String lemmatizedString = JerseyUtils.lemmatize(name);
+        FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(lemmatizedString, DEFAULT_SELECTED_FIELD, property, language,
             limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, offset, ldpathQuery);
         
         return executeQuery(referencedSiteManager, query, acceptedMediaType, language, headers);
