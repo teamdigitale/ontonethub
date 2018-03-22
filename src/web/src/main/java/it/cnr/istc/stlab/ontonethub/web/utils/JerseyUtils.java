@@ -51,8 +51,11 @@ import javax.ws.rs.ext.MessageBodyReader;
 import org.apache.commons.io.IOUtils;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.it.ItalianAnalyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
+import org.apache.lucene.util.packed.PackedInts.Reader;
 import org.apache.stanbol.commons.web.base.utils.MediaTypeUtil;
 import org.apache.stanbol.entityhub.core.query.DefaultQueryFactory;
 import org.apache.stanbol.entityhub.ldpath.query.LDPathFieldQueryImpl;
@@ -431,10 +434,11 @@ public final class JerseyUtils {
     	StringBuilder sb = new StringBuilder();
     	
 		ItalianAnalyzer analyzer = new ItalianAnalyzer(Version.LUCENE_44);
+		
 		TokenStream tokenStream;
 		try {
 			tokenStream = analyzer.tokenStream("label", query);
-			
+		
 			CharTermAttribute token = tokenStream.getAttribute(CharTermAttribute.class);
 			
 	    	tokenStream.reset();
@@ -442,8 +446,12 @@ public final class JerseyUtils {
 			    if (sb.length() > 0) {
 			        sb.append(" ");
 			    }
-			    sb.append(token.toString());
+			    
+			    sb.append(token.toString());	
 			}
+			
+			
+			
 			
 			analyzer.close();
 		} catch (IOException e) {

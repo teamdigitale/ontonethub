@@ -124,7 +124,7 @@ public class OntoNetHubSiteManagerImpl implements OntoNetHubSiteManager {
     }
 
     protected void bindReferencedSites(Site referencedSite){
-        log.debug(" ... binding ReferencedSite {}",referencedSite.getId());
+        log.info(" ... binding ReferencedSite {}",referencedSite.getId());
         referencedSites.add(referencedSite);
         idMap.put(referencedSite.getId(), referencedSite);
         addEntityPrefixes(referencedSite);
@@ -441,6 +441,48 @@ public class OntoNetHubSiteManagerImpl implements OntoNetHubSiteManager {
         log.debug("Entity {} not found on any of the following Sites {}",entityId,sites);
         return null;
     }
+	@Override
+	public QueryResultList<Entity> findEntities(Site site, FieldQuery query) {
+		
+		FieldQuery processedQuery = null;
+        FieldQuery queryWithResults = null; 
+        Set<Entity> entities = new HashSet<Entity>();
+		if(site.supportsSearch() && !site.getId().equals(Constants.wordNetSiteID)){
+            log.debug(" > query site {}",site.getId());
+            try {
+                QueryResultList<Entity> results = site.findEntities(query);
+                if(processedQuery == null){
+                    processedQuery = results.getQuery();
+                }
+                if(!results.isEmpty() && queryWithResults == null){
+                    processedQuery = results.getQuery();
+                }
+                for(Entity rep : results){
+                    if(!entities.contains(rep)){ //do not override
+                        entities.add(rep);
+                    } else {
+                        //TODO: find a solution for this problem
+                        //      e.g. allow to add the site for entities
+                        log.info("Entity {} found on more than one Referenced Site" +
+                        		" -> Representation of Site {} is ignored",
+                        		rep.getId(),site.getConfiguration().getName());
+                    }
+                }
+            } catch (SiteException e) {
+                log.warn("Unable to access Site "+site.getConfiguration().getName()+
+                    " (id = "+site.getId()+")",e);
+            }
+        } 
+		else {
+            log.debug(" > Site {} does not support queries",site.getId());
+        }
+		
+		return new QueryResultListImpl<Entity>(
+                queryWithResults != null ? queryWithResults : //use the query with results
+                    processedQuery != null ? processedQuery : //if not a processed
+                        query, //else the parsed one
+                            entities,Entity.class);
+	}
 
 
 

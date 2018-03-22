@@ -107,8 +107,91 @@ curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "acc
 ```
 It is possilble to use wildcards (i.e. `*`) in queries. Hence, if we want to find all possible terms staring with the word `Pers` the example above is converted to the following:
 ```
-curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=Pers*&lang=it”
+curl -X POST "http://localhost:8000/stanbol/ontonethub/ontologies/find" -H  "accept: application/json" -H  "content-type: application/x-www-form-urlencoded" -d "name=codice fis*&lang=it”
 ```
+The output returned by the find method is a JSON array, whose elements are the results mathing the search. An example of possible ouput is the following:
+```
+[
+    {
+        "score": 1.6661632,
+        "ontology": {
+            "id": "wCM-S8BLSINkgaCpW8bsuQ",
+            "label": [
+                {
+                    "value": "Organizzazioni (Pubbliche e Private)",
+                    "lang": "it"
+                }
+            ],
+            "comment": []
+        },
+        "context": {
+            "value": "COV-AP_IT.Organization.taxCode.Literal",
+            "fingerprint": "E4EB92CA54578D7C68D1FE72560E0370",
+            "domain": {
+                "id": "https://w3id.org/italia/onto/COV/Organization",
+                "label": [
+                    {
+                        "value": "Organizzazione",
+                        "lang": "it"
+                    }
+                ],
+                "comment": [
+                    {
+                        "value": "Questa è la classe che rappresenta un'organizzazione, sia essa pubblica che privata, tipicamente registrata all'interno di un registro pubblico (e.g., indice della PA per le pubbliche amministrazioni, registro imprese per le organizzazioni private). Esempio \"Agenzia per l'Ialia Digitale\", \"Comune di Bologna\", \"TELECOM ITALIA SPA O TIM S.P.A.\"",
+                        "lang": "it"
+                    }
+                ],
+                "controlledVocabularies": []
+            },
+            "property": {
+                "id": "https://w3id.org/italia/onto/COV/taxCode",
+                "label": [
+                    {
+                        "value": "codice fiscale",
+                        "lang": "it"
+                    }
+                ],
+                "comment": [
+                    {
+                        "value": "Questa proprietà rappresenta il codice fiscale dell'organizzazione sia essa pubblica che privata. Nel caso di imprese private il codice fiscale e la partita iva, tranne eccezioni, sono sempre coincidenti per le società, e sempre differenti per le imprese individuali. Il numero \"Registro Imprese\", ovvero il numero di iscrizione attribuito dal Registro Imprese della Camera di Commercio per le organizzazioni private, è il Codice Fiscale; nel caso si tratti di impresa individuale sarà il Codice Fiscale del titolare.",
+                        "lang": "it"
+                    }
+                ],
+                "controlledVocabularies": []
+            },
+            "range": {
+                "id": "http://www.w3.org/2000/01/rdf-schema#Literal",
+                "label": [
+                    {
+                        "value": "Literal"
+                    }
+                ],
+                "comment": [],
+                "controlledVocabularies": []
+            }
+        }
+    }
+]
+```
+
+Where:
+ - score: identifies the confidence returned querying the Solr index;
+ - ontology: is the JSON object that provides information about the ontology where the result has been found. The structure of the object is the following:
+   - id: the ID associated with the ontology internally to the OntoNetHub;
+   - label: the array of ontology labels. The array contains JSON object that represent literals using the schema `{value: string, lang: string}`. Accordingly:
+     - value: is the literal value;
+     - lang: is the natural language for expressing the specific value.
+   - comment: the array of ontology comments. The array contains JSON object that represent literals using the schema `{value: string, lang: string}` as for labels.
+ - context: provide the information that contextualises the result with repsect to the search query. Namely, a context provide information about a unviverse (domain - property - range) that mathces a possible term provided as input. The context is a JSON object defined as follows:
+   - value: the literal representation of the context, povided as ONTOLOGY.DOMAIN.PROPERTY.RANGE. An example of possible literal is "COV-AP_IT.Organization.taxCode.Literal", where COV-AP_IT idenfies the ontology, Organization is the domaim, taxCode is the property, and Literal is the range;
+   - fingerprint: is the MD5 checksum of the context value;
+   - domain: is the JSON object that provides information about the domain returned in the context. The schema is `{id: string, label: object, comment: object}`, where:
+     - id: is the URI that idenfies the domain class, e.g. https://w3id.org/italia/onto/COV/Organization ;
+     - label and comment: are literal objects represented as for the ontology object.
+     - controlledVocabularies: is the array of possible available controlled vocabularies that standardise the object of this type. Controlled vocabularies are returned as URIs provided as string, e.g. http://dati.gov.it/onto/controlledvocabulary/AccoStarRating ;
+   - property: is the JSON object that provides information about the property returned in the context. The schema is `{id: string, label: object, comment: object, controlledVocabularies}` as previously defined;
+  - range: is the JSON object that provides information about the range returned in the context. The schema is `{id: string, label: object, comment: object, controlledVocabularies}` as previously defined.
+
 In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to `http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find`, where `ontologyID` has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.
 
 Furthermore, it is possible to retrieve the context associated with a certain ontology entity. By context we mean the RDF representation of an entity, which is:

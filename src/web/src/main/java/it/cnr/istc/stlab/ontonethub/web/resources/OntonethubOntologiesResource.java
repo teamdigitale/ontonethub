@@ -1,19 +1,14 @@
 package it.cnr.istc.stlab.ontonethub.web.resources;
 
-import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.getLDPathParseExceptionMessage;
-import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.prepareQueryLDPathProgram;
-import static it.cnr.istc.stlab.ontonethub.web.utils.LDPathHelper.transformQueryResults;
 import static javax.ws.rs.core.MediaType.TEXT_HTML;
 import static org.apache.stanbol.commons.web.base.utils.MediaTypeUtil.getAcceptableMediaType;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
@@ -38,19 +33,11 @@ import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
-import org.apache.marmotta.ldpath.exception.LDPathParseException;
-import org.apache.marmotta.ldpath.model.programs.Program;
-import org.apache.stanbol.commons.indexedgraph.IndexedGraph;
 import org.apache.stanbol.commons.namespaceprefix.NamespaceMappingUtils;
 import org.apache.stanbol.commons.namespaceprefix.NamespacePrefixService;
 import org.apache.stanbol.commons.web.base.resource.BaseStanbolResource;
 import org.apache.stanbol.commons.web.viewable.Viewable;
-import org.apache.stanbol.entityhub.core.model.InMemoryValueFactory;
 import org.apache.stanbol.entityhub.core.query.QueryResultListImpl;
-import org.apache.stanbol.entityhub.ldpath.EntityhubLDPath;
-import org.apache.stanbol.entityhub.ldpath.backend.SiteManagerBackend;
-import org.apache.stanbol.entityhub.ldpath.query.LDPathSelect;
-import org.apache.stanbol.entityhub.model.clerezza.RdfValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.model.Entity;
 import org.apache.stanbol.entityhub.servicesapi.model.Representation;
 import org.apache.stanbol.entityhub.servicesapi.model.Text;
@@ -58,7 +45,6 @@ import org.apache.stanbol.entityhub.servicesapi.model.ValueFactory;
 import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
 import org.apache.stanbol.entityhub.servicesapi.site.SiteManager;
-import org.apache.stanbol.entityhub.servicesapi.util.AdaptingIterator;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
@@ -69,10 +55,15 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hp.hpl.jena.rdf.model.Resource;
+import com.hp.hpl.jena.rdf.model.ResourceFactory;
 
 import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyInfo;
 import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
+import it.cnr.istc.stlab.ontonethub.web.adapter.MissingRepresentationAdapterException;
+import it.cnr.istc.stlab.ontonethub.web.adapter.RepresentationAdapter;
+import it.cnr.istc.stlab.ontonethub.web.adapter.RepresentationAdapterFactory;
 import it.cnr.istc.stlab.ontonethub.web.utils.JerseyUtils;
 
 @Component
@@ -111,15 +102,6 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 	private UriInfo uriInfo;
 	
 	private ObjectMapper objectMapper;
-	
-	private static final String LDPATH_QUERY = "dafLabel = <http://dati.gov.it/onto/ann-voc/dafLabel> :: xsd:string; "
-			+ "dafId = <http://dati.gov.it/onto/ann-voc/dafId> :: xsd:string; "
-			+ "rdfLabel = rdfs:label%LANG% :: xsd:string; "
-			+ "rdfLabel.class = rdfs:domain/rdfs:label%LANG% :: xsd:string; "
-			+ "rdfLabel.ont = <http://dati.gov.it/onto/ann-voc/definedInOntology>/rdfs:label%LANG% :: xsd:string; "
-			+ "comment = rdfs:comment[@it] :: xsd:string; "
-			+ "comment.class = rdfs:domain/rdfs:comment%LANG% :: xsd:string; "
-			+ "comment.ont = <http://dati.gov.it/onto/ann-voc/definedInOntology>/rdfs:comment%LANG% :: xsd:string;"; 
 	
 	@OPTIONS
     public Response handleCorsPreflight(@Context HttpHeaders headers){
@@ -231,7 +213,8 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         if(ldpath != null && !ldpath.isEmpty()) ldpathQuery += ldpath;
         	*/
         
-        String lemmatizedString = JerseyUtils.lemmatize(name);
+        String lemmatizedString = JerseyUtils.lemmatize(name) + "*";
+        log.debug("Searching {}", lemmatizedString);
         FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(lemmatizedString, DEFAULT_SELECTED_FIELD, property, language,
             limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, offset, ldpathQuery);
         
@@ -268,94 +251,292 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         */
             QueryResultList<Entity> result = manager.findEntities(query);
             
+            /* Serializzazione classica dell'Entityhub
             QueryResultList<Representation> representations  = new QueryResultListImpl<Representation>(query, transformQueryResult(result, lang), Representation.class);
-            
             ResponseBuilder rb = Response.ok(representations);
+            */
+            
+            /* Nuova serializzazione
+             */
+            JSONArray arr = transformResult(result, lang);
+            ResponseBuilder rb = Response.ok(arr.toString());
+             
+            
+            
             rb.header(HttpHeaders.CONTENT_TYPE, mediaType+"; charset=utf-8");
             //addCORSOrigin(servletContext, rb, headers);
             return rb.build();
         //}
     }
     
-    /**
-     * Execute a Query that uses LDPath to process results.
-     * @param query the query
-     * @param mediaType the mediaType for the response
-     * @param headers the http headers of the request
-     * @return the response
-     */
-    private Response executeLDPathQuery(SiteManager manager,FieldQuery query, String ldpathProgramString, MediaType mediaType, HttpHeaders headers) {
-        QueryResultList<Representation> result;
-        ValueFactory vf = new RdfValueFactory(new IndexedGraph());
-        SiteManagerBackend backend = new SiteManagerBackend(manager);
-        EntityhubLDPath ldPath = new EntityhubLDPath(backend,vf);
-        //copy the selected fields, because we might need to delete some during
-        //the preparation phase
-        Set<String> selectedFields = new HashSet<String>(query.getSelectedFields());
-        //first prepare (only execute the query if the parameters are valid)
-        Program<Object> program;
-        try {
-            program = prepareQueryLDPathProgram(ldpathProgramString, selectedFields, backend, ldPath);
-        } catch (LDPathParseException e) {
-            log.warn("Unable to parse LDPath program used as select for a Query to the '/sites' endpoint:");
-            log.warn("FieldQuery: \n {}",query);
-            log.warn("LDPath: \n {}",((LDPathSelect)query).getLDPathSelect());
-            log.warn("Exception:",e);
-            return Response.status(Status.BAD_REQUEST)
-            .entity(("Unable to parse LDPath program (Messages: "+
-                    getLDPathParseExceptionMessage(e)+")!\n"))
-            .header(HttpHeaders.ACCEPT, mediaType).build();
-        } catch (IllegalStateException e) {
-            log.warn("parsed LDPath program is not compatible with the Query " +
-            		"parsed to the '/sites' endpoint!",e);
-            return Response.status(Status.BAD_REQUEST)
-            .entity(e.getMessage())
-            .header(HttpHeaders.ACCEPT, mediaType).build();
-        }
-        //2. execute the query
-        // we need to adapt from Entity to Representation
-        //TODO: should we add the metadata to the result?
-        
-        Iterator<Representation> resultIt = new AdaptingIterator<Entity,Representation>(manager.findEntities(query).iterator(),
-            new AdaptingIterator.Adapter<Entity,Representation>() {
-                @Override
-                public Representation adapt(Entity value, Class<Representation> type) {
-                    return value.getRepresentation();
-                }},Representation.class);
-        //process the results
-        Collection<Representation> transformedResults = transformQueryResults(resultIt, program,
-            selectedFields, ldPath, backend, vf);
-        result = new QueryResultListImpl<Representation>(query, transformedResults, Representation.class);
-        ResponseBuilder rb = Response.ok(result);
-        rb.header(HttpHeaders.CONTENT_TYPE, mediaType+"; charset=utf-8");
-        //addCORSOrigin(servletContext, rb, headers);
-        return rb.build();
-    }
-    
-    private Collection<Representation> transformQueryResult(QueryResultList<Entity> entities, String lang){
-    	Collection<Representation> transformedResults = new ArrayList<Representation>();
-    	ValueFactory vf = InMemoryValueFactory.getInstance();
+    private JSONArray transformResult(QueryResultList<Entity> entities, String lang){
+    	
+    	JSONArray array = new JSONArray();
+    	try {
+			RepresentationAdapter representationAdapter = RepresentationAdapterFactory.getAdapter(JSONObject.class);
+			entities.forEach(entity -> {
+				Representation representation = entity.getRepresentation();
+				try {
+					JSONObject jsonObject = representationAdapter.adapt(representation, lang);
+					array.put(jsonObject);
+				} catch (Exception e) {
+					log.error(e.getMessage(), e);
+				}
+			});
+		} catch (MissingRepresentationAdapterException e) {
+			log.error(e.getMessage(), e);
+		}
+    	/*
+    	JSONArray array = new JSONArray();
     	entities.forEach(entity -> {
     		Representation representation = entity.getRepresentation();
-    		Representation newRepresentation = vf.createRepresentation(representation.getId());
-    		
-    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#label", "label", representation, newRepresentation, lang, vf);
-    		addTextToRepresentation("http://www.w3.org/2000/01/rdf-schema#comment", "comment", representation, newRepresentation, lang, vf);
-    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafLabel", "dafLabel", representation, newRepresentation, vf);
-    		addObjectToRepresentation("http://dati.gov.it/onto/ann-voc/dafId", "dafId", representation, newRepresentation, vf);
-    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassLabel", "label.class", representation, newRepresentation, lang, vf);
-    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/domainClassComment", "comment.class", representation, newRepresentation, lang, vf);
-    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyLabel", "label.ontology", representation, newRepresentation, lang, vf);
-    		addTextToRepresentation("http://dati.gov.it/onto/ann-voc/ontologyComment", "comment.ontology", representation, newRepresentation, lang, vf);
-    		addObjectToRepresentation("http://stanbol.apache.org/ontology/entityhub/query#score", "score", representation, newRepresentation, vf);
-    		
-    		transformedResults.add(newRepresentation);
-    		
+    		try {
+				array.put(transform(representation, lang));
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
     	});
+    	*/
     	
-    	return transformedResults;
+    	return array;
     }
     
+    private JSONObject transform(Representation representation, String lang) throws JSONException{
+    	JSONObject obj = new JSONObject();
+    	Iterator<Object> it = representation.get("http://dati.gov.it/onto/ann-voc/dafLabel");
+    	if(it.hasNext()){
+    		Text dafLabel = (Text) it.next();
+    		obj.put("dafLabel", dafLabel.getText());
+    	}
+    	
+    	it = representation.get("http://dati.gov.it/onto/ann-voc/dafId");
+    	if(it.hasNext()){
+    		Text dafId = (Text) it.next();
+    		obj.put("dafId", dafId.getText());
+    	}
+    	
+    	it = representation.get("http://stanbol.apache.org/ontology/entityhub/query#score");
+    	if(it.hasNext()){
+    		Float score = (Float) it.next();
+    		obj.put("score", score);
+    	}
+    	
+    	JSONObject ontologyObj = new JSONObject();
+    	it = representation.get("http://dati.gov.it/onto/ann-voc/ontologyId");
+    	if(it.hasNext()){
+    		Text ontologyId = (Text)it.next();
+    		
+    		ontologyObj.put("id", ontologyId.getText());
+    	}
+    	
+    	Iterator<Text> textIt = representation.get("http://dati.gov.it/onto/ann-voc/ontologyLabel", lang);
+    	JSONArray ontoLabels = new JSONArray();
+    	if(textIt.hasNext()){
+    		Text ontologyLabel = textIt.next();
+    		
+    		JSONObject ontologyLabelObj = new JSONObject();
+    		ontologyLabelObj.put("value", ontologyLabel.getText());
+    		
+    		String language = ontologyLabel.getLanguage();
+    		if(language != null) ontologyLabelObj.put("lang", language);
+    		
+    		ontoLabels.put(ontologyLabelObj);
+    	}
+    	
+    	textIt = representation.get("http://dati.gov.it/onto/ann-voc/ontologyComment", lang);
+    	JSONArray ontoComments = new JSONArray();
+    	while(textIt.hasNext()){
+    		Text ontologyComment = textIt.next();
+    		
+    		JSONObject ontologyCommentObj = new JSONObject();
+    		ontologyCommentObj.put("value", ontologyComment.getText());
+    		
+    		String language = ontologyComment.getLanguage();
+    		if(language != null) ontologyCommentObj.put("lang", language);
+    		ontoComments.put(ontologyCommentObj);
+    		
+    	}
+    	
+    	ontologyObj.put("label", ontoLabels);
+    	ontologyObj.put("comment", ontoComments);
+    	obj.put("ontology", ontologyObj);
+    	
+    	
+    	it = representation.get("http://dati.gov.it/onto/ann-voc/universeSignature");
+    	if(it.hasNext()){
+    		Text contextTriple = (Text) it.next();
+    		JSONObject contextObj = new JSONObject();
+    		obj.put("context", contextObj);
+    		
+    		contextObj.put("value", contextTriple.getText());
+    		
+    		Iterator<Object> fingerprintIt = representation.get("http://dati.gov.it/onto/ann-voc/universeFingerprint");
+    		if(fingerprintIt.hasNext()){
+    			String fingerprint = ((Text) fingerprintIt.next()).getText();
+    			contextObj.put("fingerprint", fingerprint);
+    		}
+    		
+    		Iterator<Object> contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeDomain");
+    		if(contextIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference domain = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
+    			JSONObject contextDomainObj = new JSONObject();
+    			contextObj.put("domain", contextDomainObj);
+    			contextDomainObj.put("id", domain.getReference());
+    			
+    			JSONArray domainLabels = new JSONArray();
+    			contextDomainObj.put("label", domainLabels);
+    			Iterator<Text> domainIt = representation.get("http://dati.gov.it/onto/ann-voc/domainLabel", lang);
+    			while(domainIt.hasNext()){
+    				Text text = domainIt.next();
+    				
+    				JSONObject domainLabel = new JSONObject();
+    				domainLabel.put("value", text.getText());
+    				if(lang != null){
+    					domainLabel.put("lang", lang);
+    				}
+    				domainLabels.put(domainLabel);
+    			}
+    			
+    			if(domainLabels.length() == 0){
+    				Resource res = ResourceFactory.createResource(domain.getReference());
+    				JSONObject labelObj = new JSONObject();
+    				labelObj.put("value", res.getLocalName());
+    				domainLabels.put(labelObj);
+    			}
+    			
+    			JSONArray domainComments = new JSONArray();
+    			contextDomainObj.put("comment", domainComments);
+    			domainIt = representation.get("http://dati.gov.it/onto/ann-voc/domainComment", lang);
+    			while(domainIt.hasNext()){
+    				Text text = domainIt.next();
+    				
+    				JSONObject domainComment = new JSONObject();
+    				domainComment.put("value", text.getText());
+    				if(lang != null){
+    					domainComment.put("lang", lang);
+    				}
+    				domainComments.put(domainComment);
+    			}
+    			
+    			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/domainControlledVocabulary");
+    			JSONArray controlledVocabulariesArr = new JSONArray();
+    			contextDomainObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			while(cvIt.hasNext()){
+    				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
+    				controlledVocabulariesArr.put(cv.getReference());
+    			}
+    			
+    			
+    		}
+    		
+    		contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeProperty");
+    		if(contextIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference property = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
+    			JSONObject contextPropertyObj = new JSONObject();
+    			contextObj.put("property", contextPropertyObj);
+    			contextPropertyObj.put("id", property.getReference());
+    			
+    			JSONArray propertyLabels = new JSONArray();
+    			contextPropertyObj.put("label", propertyLabels);
+    			Iterator<Text> propertyIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyLabel", lang);
+    			while(propertyIt.hasNext()){
+    				Text text = propertyIt.next();
+    				
+    				JSONObject propertyLabel = new JSONObject();
+    				propertyLabel.put("value", text.getText());
+    				if(lang != null){
+    					propertyLabel.put("lang", lang);
+    				}
+    				propertyLabels.put(propertyLabel);
+    			}
+    			
+    			if(propertyLabels.length() == 0){
+    				Resource res = ResourceFactory.createResource(property.getReference());
+    				JSONObject labelObj = new JSONObject();
+    				labelObj.put("value", res.getLocalName());
+    				propertyLabels.put(labelObj);
+    			}
+    			
+    			JSONArray propertyComments = new JSONArray();
+    			contextPropertyObj.put("comment", propertyComments);
+    			propertyIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyComment", lang);
+    			while(propertyIt.hasNext()){
+    				Text text = propertyIt.next();
+    				
+    				JSONObject propertyComment = new JSONObject();
+    				propertyComment.put("value", text.getText());
+    				if(lang != null){
+    					propertyComment.put("lang", lang);
+    				}
+    				propertyComments.put(propertyComment);
+    			}
+    			
+    			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyControlledVocabulary");
+    			JSONArray controlledVocabulariesArr = new JSONArray();
+    			contextPropertyObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			while(cvIt.hasNext()){
+    				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
+    				controlledVocabulariesArr.put(cv.getReference());
+    			}
+    			
+    		}
+    		
+    		contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeRange");
+    		if(contextIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference range = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
+    			JSONObject contextRangeObj = new JSONObject();
+    			contextObj.put("range", contextRangeObj);
+    			contextRangeObj.put("id", range.getReference());
+    			
+    			JSONArray rangeLabels = new JSONArray();
+    			contextRangeObj.put("label", rangeLabels);
+    			Iterator<Text> rangeIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeLabel", lang);
+    			while(rangeIt.hasNext()){
+    				Text text = rangeIt.next();
+    				
+    				JSONObject rangeLabel = new JSONObject();
+    				rangeLabel.put("value", text.getText());
+    				if(lang != null){
+    					rangeLabel.put("lang", lang);
+    				}
+    				rangeLabels.put(rangeLabel);
+    			}
+    			
+    			if(rangeLabels.length() == 0){
+    				Resource res = ResourceFactory.createResource(range.getReference());
+    				JSONObject labelObj = new JSONObject();
+    				labelObj.put("value", res.getLocalName());
+    				rangeLabels.put(labelObj);
+    			}
+    			
+    			JSONArray rangeComments = new JSONArray();
+    			contextRangeObj.put("comment", rangeComments);
+    			rangeIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeComment", lang);
+    			while(rangeIt.hasNext()){
+    				Text text = rangeIt.next();
+    				
+    				JSONObject rangeComment = new JSONObject();
+    				rangeComment.put("value", text.getText());
+    				if(lang != null){
+    					rangeComment.put("lang", lang);
+    				}
+    				rangeComments.put(rangeComment);
+    			}
+    			
+    			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeControlledVocabulary");
+    			JSONArray controlledVocabulariesArr = new JSONArray();
+    			contextRangeObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			while(cvIt.hasNext()){
+    				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
+    				controlledVocabulariesArr.put(cv.getReference());
+    			}
+    			
+    		}
+    		
+    	}
+    	return obj;
+    }
     
     private void addTextToRepresentation(String oldFieldName, 
     		String newFieldName, 

@@ -49,13 +49,26 @@ rdfs:range | d=entityhub:ref
 
 http://dati.gov.it/onto/ann-voc/dafLabel
 http://dati.gov.it/onto/ann-voc/dafId
-http://dati.gov.it/onto/ann-voc/domainClassLabel
-http://dati.gov.it/onto/ann-voc/domainClassComment
+http://dati.gov.it/onto/ann-voc/domainLabel
+http://dati.gov.it/onto/ann-voc/domainComment
+http://dati.gov.it/onto/ann-voc/propertyLabel
+http://dati.gov.it/onto/ann-voc/propertyComment
+http://dati.gov.it/onto/ann-voc/rangeLabel
+http://dati.gov.it/onto/ann-voc/rangeComment
+http://dati.gov.it/onto/ann-voc/ontologyId
 http://dati.gov.it/onto/ann-voc/ontologyLabel
 http://dati.gov.it/onto/ann-voc/ontologyComment
 http://dati.gov.it/onto/ann-voc/synonym
+http://dati.gov.it/onto/ann-voc/contextTriple
+http://dati.gov.it/onto/ann-voc/universeSignature
+http://dati.gov.it/onto/ann-voc/universeFingerprint
+http://dati.gov.it/onto/ann-voc/universeDomain | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/universeProperty | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/universeRange | d=entityhub:ref
 http://dati.gov.it/onto/ann-voc/definedInOntology | d=entityhub:ref
-http://dati.gov.it/onto/ann-voc/usage | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/domainControlledVocabulary | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/propertyControlledVocabulary | d=entityhub:ref
+http://dati.gov.it/onto/ann-voc/rangeControlledVocabulary | d=entityhub:ref
 
 # http://dati.gov.it/onto/ann-voc/synonym > rdfs:label
 

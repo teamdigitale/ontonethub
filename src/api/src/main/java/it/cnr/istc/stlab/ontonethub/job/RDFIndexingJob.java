@@ -144,7 +144,7 @@ public class RDFIndexingJob extends AbstractIndexingJob {
 				error = true;
 			}
 			
-			log.info("Executint job index for {} is error? {}", ontologyName, error);
+			log.info("Executing job index for {} is error? {}", ontologyName, error);
 			
 			
 			if(!error){

@@ -77,6 +77,15 @@ public interface OntoNetHubSiteManager {
      * @return the id's of Entities
      */
     QueryResultList<Entity> findEntities(FieldQuery query);
+    
+    /**
+     * Returns the Entities from a specific sitethat confirm to the parsed Query
+     * @param site the site
+     * @param query the query
+     * @return the id's of Entities
+     */
+    QueryResultList<Entity> findEntities(Site site, FieldQuery query);
+    
     /**
      * Searches for Entities based on the parsed query and returns representations
      * including the selected fields and filtered values

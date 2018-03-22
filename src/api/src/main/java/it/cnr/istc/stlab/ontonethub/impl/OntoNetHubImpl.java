@@ -63,6 +63,7 @@ import it.cnr.istc.stlab.ontonethub.OntoNetHub;
 import it.cnr.istc.stlab.ontonethub.OntologyAlreadyExistingException;
 import it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary;
 import it.cnr.istc.stlab.ontonethub.OntologyInfo;
+import it.cnr.istc.stlab.ontonethub.SPARQLQueryManager;
 import it.cnr.istc.stlab.ontonethub.UnmappableOntologyException;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJob;
 import it.cnr.istc.stlab.ontonethub.job.IndexingJobInput;
@@ -92,6 +93,9 @@ public class OntoNetHubImpl implements OntoNetHub {
 	
 	@Reference
 	private OntoNetHubSiteManager siteManager;
+	
+	@Reference
+	private SPARQLQueryManager sparqlQueryManager;
 	
 	@Reference
 	private JobManager jobManager;
@@ -131,9 +135,9 @@ public class OntoNetHubImpl implements OntoNetHub {
 		if(site == null){
 			IndexingJob job = null;
 			if(input.getOntologyId() == null)
-				job = new IndexingJob(siteManager, input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+				job = new IndexingJob(sparqlQueryManager, siteManager, input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
 			else 
-				job = new IndexingJob(siteManager, input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+				job = new IndexingJob(sparqlQueryManager, siteManager, input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
 			String jid = jobManager.execute(job);
 			
 			return jid;
@@ -629,7 +633,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 									String localOntologyIri = localOntology.toString().replace("<", "").replace(">", "");
 									String ontologyId = localOntologyIri.toString().replace(OntologyDescriptionVocabulary.ONTOLOGY, "");
 									File ontologyFile = new File(ontologiesFolder, ontologyId + "." + "rdf");
-									log.info("Local ontology IRI string: {}", ontologyId);
+									log.debug("Local ontology IRI string: {}", ontologyId);
 									Model localModel = FileManager.get().loadModel(ontologyFile.getPath());
 									Model remoteModel = FileManager.get().loadModel(iri);
 									
@@ -657,47 +661,6 @@ public class OntoNetHubImpl implements OntoNetHub {
 	}
 	
 	protected void deactivate(ComponentContext ctx) throws IOException {
-		/*
-		Graph graph = tcManager.getGraph(new IRI("ontonethub-graph"));
-		
-		Bundle bundle = ctx.getBundleContext().getBundle();
-		Enumeration<String> entryPaths = bundle.getEntryPaths("ontologies");
-		if(entryPaths != null){
-			while(entryPaths.hasMoreElements()){
-				String ontologyEntryPath = entryPaths.nextElement();
-				log.info("Reading ontology info from {}", ontologyEntryPath);
-				if(ontologyEntryPath.toLowerCase().endsWith(".conf")){
-					InputStream is = bundle.getEntry(ontologyEntryPath).openStream();
-					Properties props = new Properties();
-					props.load(is);
-					is.close();
-					
-					String name = props.getProperty("name");
-					String iri = props.getProperty("iri");
-					
-					if(graph != null){
-					
-						try{
-							Iterator<Triple> tripleIt = graph.filter(null, new IRI(OntologyDescriptionVocabulary.HAS_ONTOLOGY_IRI), new IRI(iri));
-							if(tripleIt != null && tripleIt.hasNext()) {
-								Triple triple = tripleIt.next();
-								IRI subject = (IRI)triple.getSubject();
-								String subjectIRI = subject.toString().replace("<", "").replace(">", "");
-								String ontologyId = subjectIRI.replace(ONTOLOGY, "");
-								
-								deleteOntologyIndex(ontologyId);
-								log.info("Unloaded ontology {} with ID {} from OntoNetHub for shutdown.", name, ontologyId);
-								System.out.println("Unloaded ontology " + name + " with ID " + ontologyId + " from OntoNetHub for shutdown.");
-							}
-						} catch(Exception e){
-							log.error("Error for ontology " + iri, e);
-						}
-					}
-				}
-			}
-		}
-		*/
-		
 		this.ctx = null;
 	}
 	
@@ -710,8 +673,9 @@ public class OntoNetHubImpl implements OntoNetHub {
 		else indexingJobInput = new IndexingJobInput(ontologyId, name, description, iri, model);
 		try {
 			String jobId = indexOntology(indexingJobInput);
-			while(!jobManager.ping(jobId).isDone())
+			while(!jobManager.ping(jobId).isDone()){
 				Thread.sleep(1000);
+			}
 			
 		} catch (OntologyAlreadyExistingException | InterruptedException e) {
 			log.error(e.getMessage(), e);

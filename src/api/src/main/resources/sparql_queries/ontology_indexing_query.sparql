@@ -1,0 +1,22 @@
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX afn: <http://jena.hpl.hp.com/ARQ/function#>
+PREFIX daf-v: <http://dati.gov.it/onto/ann-voc/>
+PREFIX l0: <https://w3id.org/italia/onto/l0/>
+SELECT DISTINCT ?domain ?property ?range
+    WHERE{
+      {
+          ?property rdfs:domain/((owl:unionOf|owl:intersectionOf)/(rdf:rest*/rdf:first)*)* ?domain ;
+            rdfs:range/((owl:unionOf|owl:intersectionOf)/(rdf:rest*/rdf:first)*)* ?range .
+        }
+          UNION
+        {
+          ?domain (rdfs:subClassOf|owl:equivalentClass) ?restriction .
+          ?restriction a owl:Restriction ; 
+            owl:onProperty ?property ;(owl:sameValuesFrom|owl:allValuesFrom|owl:cardinality|owl:maxCardinality|owl:minCardinality)/((owl:unionOf|owl:intersectionOf)/(rdf:rest*/rdf:first)*)* ?range 
+        }
+  FILTER(isIRI(?domain))
+  FILTER(isIRI(?range))
+}
+  
