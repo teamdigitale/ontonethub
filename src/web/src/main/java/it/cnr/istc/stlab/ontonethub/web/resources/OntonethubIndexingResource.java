@@ -444,7 +444,7 @@ public class OntonethubIndexingResource extends BaseStanbolResource {
 			entities.forEach(entity -> {
 				Representation representation = entity.getRepresentation();
 				try {
-					JSONObject jsonObject = representationAdapter.adapt(representation, lang);
+					JSONObject jsonObject = representationAdapter.adapt(referencedSiteManager, representation, lang);
 					array.put(jsonObject);
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);

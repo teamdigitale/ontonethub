@@ -258,7 +258,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
             
             /* Nuova serializzazione
              */
-            JSONArray arr = transformResult(result, lang);
+            JSONArray arr = transformResult(manager, result, lang);
             ResponseBuilder rb = Response.ok(arr.toString());
              
             
@@ -269,7 +269,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         //}
     }
     
-    private JSONArray transformResult(QueryResultList<Entity> entities, String lang){
+    private JSONArray transformResult(OntoNetHubSiteManager manager, QueryResultList<Entity> entities, String lang){
     	
     	JSONArray array = new JSONArray();
     	try {
@@ -277,7 +277,7 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
 			entities.forEach(entity -> {
 				Representation representation = entity.getRepresentation();
 				try {
-					JSONObject jsonObject = representationAdapter.adapt(representation, lang);
+					JSONObject jsonObject = representationAdapter.adapt(manager, representation, lang);
 					array.put(jsonObject);
 				} catch (Exception e) {
 					log.error(e.getMessage(), e);

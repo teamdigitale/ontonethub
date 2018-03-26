@@ -32,6 +32,8 @@ public class OntologyDescriptionVocabulary {
 	public static String IMPORTED_ONTOLOGIES = NS + "importedOntologies";
 	public static String SYNONYM = NS + "synonym";
 	public static String USAGE = NS + "usage";
+	public static String DOMAIN_USAGE = NS + "domainUsage";
+	public static String RANGE_USAGE = NS + "rangeUsage";
 	public static String FULL_USAGE = NS + "fullUsage";
 	public static String ONTOLOGY_ID = NS + "ontologyId";
 	public static String ONTOLOGY_LABEL = NS + "ontologyLabel";
@@ -50,11 +52,15 @@ public class OntologyDescriptionVocabulary {
 	public static String UNIVERSE_DOMAIN = NS + "universeDomain";
 	public static String UNIVERSE_PROPERTY = NS + "universeProperty";
 	public static String UNIVERSE_RANGE= NS + "universeRange";
+	public static String IS_DOMAIN_OF_UNIVERSE = NS + "isDomainOfUniverse";
+	public static String IS_RANGE_OF_UNIVERSE = NS + "isRangeOfUniverse";
 	
 	public static Property domainClassLabel = ResourceFactory.createProperty(DOMAIN_CLASS_LABEL);
 	public static Property domainClassComment = ResourceFactory.createProperty(DOMAIN_CLASS_COMMENT);
 	public static Property synonym = ResourceFactory.createProperty(SYNONYM);
 	public static Property usage = ResourceFactory.createProperty(USAGE);
+	public static Property domainUsage = ResourceFactory.createProperty(DOMAIN_USAGE);
+	public static Property rangeUsage = ResourceFactory.createProperty(RANGE_USAGE);
 	public static Property fullUsage = ResourceFactory.createProperty(FULL_USAGE);
 	public static Property ontologyId = ResourceFactory.createProperty(ONTOLOGY_ID);
 	public static Property ontologyLabel = ResourceFactory.createProperty(ONTOLOGY_LABEL);
@@ -72,6 +78,8 @@ public class OntologyDescriptionVocabulary {
 	public static Property domainControlledVocabulary = ResourceFactory.createProperty(DOMAIN_CONTROLLED_VOCABULARY);
 	public static Property propertyControlledVocabulary = ResourceFactory.createProperty(PROPERTY_CONTROLLED_VOCABULARY);
 	public static Property rangeControlledVocabulary = ResourceFactory.createProperty(RANGE_CONTROLLED_VOCABULARY);
+	public static Property isDomainOfUniverse = ResourceFactory.createProperty(IS_DOMAIN_OF_UNIVERSE);
+	public static Property isRangeOfUniverse = ResourceFactory.createProperty(IS_RANGE_OF_UNIVERSE);
 	public static Property universeDomain = ResourceFactory.createProperty(UNIVERSE_DOMAIN);
 	public static Property universeProperty = ResourceFactory.createProperty(UNIVERSE_PROPERTY);
 	public static Property universeRange = ResourceFactory.createProperty(UNIVERSE_RANGE);

@@ -22,6 +22,7 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.vocabulary.OWL;
+import com.hp.hpl.jena.vocabulary.OWL2;
 import com.hp.hpl.jena.vocabulary.RDF;
 import com.hp.hpl.jena.vocabulary.RDFS;
 
@@ -64,19 +65,26 @@ public class IndexingModelFactory {
 			
 			
 			
-			String contextIdHex = null; 
+			String contextIdHex = null;
+			/*
 			try {
-				contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest(contextId.getBytes()));
+				contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest((domainLocalname + "." + propertyLocalname + "." + rangeLocalname).getBytes()));
 			} catch (NoSuchAlgorithmException e) {
 				contextIdHex = domainLocalname + "." + propertyLocalname + "." + rangeLocalname;
 			}
+			*/
+			contextIdHex = contextId;
 			
 			Resource context = ResourceFactory.createResource(property.getNameSpace() + contextIdHex);
 			
 			model.add(context, RDF.type, OntologyDescriptionVocabulary.context);
 			model.add(context, OntologyDescriptionVocabulary.universeDomain, domain);
+			model.add(domain, OntologyDescriptionVocabulary.isDomainOfUniverse, context);
+			model.add(domain, RDF.type, OWL2.Class);
 			model.add(context, OntologyDescriptionVocabulary.universeProperty, property);
 			model.add(context, OntologyDescriptionVocabulary.universeRange, range);
+			model.add(range, OntologyDescriptionVocabulary.isRangeOfUniverse, context);
+			model.add(range, RDF.type, OWL2.Class);
 			model.add(context, OntologyDescriptionVocabulary.definedInOntology, ontology);
 			model.add(context, OntologyDescriptionVocabulary.universeSignature, ResourceFactory.createPlainLiteral(contextId));
 			model.add(context, OntologyDescriptionVocabulary.universeFingerprint, ResourceFactory.createPlainLiteral(contextIdHex));

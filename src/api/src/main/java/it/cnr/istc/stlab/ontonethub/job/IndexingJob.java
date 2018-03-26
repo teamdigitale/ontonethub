@@ -10,6 +10,8 @@ import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.INDIVID
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OBJECT_PROPERTIES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ONTOLOGY;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OWL_CLASSES;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.domainUsage;
+import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.rangeUsage;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.synonym;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.usage;
 
@@ -18,6 +20,8 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -25,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 
 import org.apache.clerezza.commons.rdf.Graph;
 import org.apache.clerezza.commons.rdf.IRI;
@@ -245,7 +251,31 @@ public class IndexingJob extends AbstractIndexingJob {
 						
 						indexingModel.add(IndexingModelFactory.create(jobId, ontologyName, domain, property, range));
 						
+						
+						List<Statement> stmts = getDomainUsage(ModelFactory.createOntologyModel().createClass(domain.getURI()), ontModel);
+						
+						String domainAsRangeLocalname = domain.getLocalName();
+						for(Statement stmt : stmts){
+							Resource subj = stmt.getSubject();
+							Property pred = stmt.getPredicate();
+							
+							String domainLocalname = subj.getLocalName();
+							String propertyLocalname = pred.getLocalName(); 
+							String contextIdHex = null; 
+							try {
+								contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest((domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname).getBytes()));
+							} catch (NoSuchAlgorithmException e) {
+								contextIdHex = domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname;
+							}
+						}
+						indexingModel.add(stmts);
+						stmts = getRangeUsage(ModelFactory.createOntologyModel().createClass(range.getURI()), ontModel);
+						indexingModel.add(stmts);
+						
+						
 					}
+					
+					
 						
 					indexingModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
 				}catch(Exception e){
@@ -779,12 +809,12 @@ public class IndexingJob extends AbstractIndexingJob {
 		
 	}
 	
-	private List<Statement> getUsage(OntClass ontClass, Model model){
+	private List<Statement> getDomainUsage(OntClass ontClass, Model model){
 		List<Statement> stmts = new ArrayList<Statement>();
 		try{
 			String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
 					+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
-					+ "SELECT DISTINCT ?concept "
+					+ "SELECT DISTINCT ?concept ?prop"
 					+ "WHERE{"
 					+ "  {?prop rdfs:range <" + ontClass.getURI() + ">; "
 					+ "    rdfs:domain ?concept"
@@ -793,8 +823,46 @@ public class IndexingJob extends AbstractIndexingJob {
 					+ "  { "
 					+ "    ?concept rdfs:subClassOf|owl:equivalentClass ?restriction . "
 					+ "    ?restriction a owl:Restriction; "
-					+ "      ?p <" + ontClass.getURI() + "> "
+					+ "      ?prop <" + ontClass.getURI() + "> "
 					+ "  } "
+					+ "  FILTER(isIRI(?concept)) "
+					+ "}";
+					
+			Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+			QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+			
+			ResultSet resultSet = queryExecution.execSelect();
+			while(resultSet.hasNext()){
+				QuerySolution querySolution = resultSet.next();
+				Resource concept = querySolution.getResource("concept");
+				
+				stmts.add(new StatementImpl(ontClass, domainUsage, concept));
+			}
+		} catch(Exception e){
+			log.error(e.getMessage(), e);
+		}
+		
+		return stmts;
+		
+	}
+	
+	private List<Statement> getRangeUsage(OntClass ontClass, Model model){
+		List<Statement> stmts = new ArrayList<Statement>();
+		try{
+			String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+					+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
+					+ "SELECT DISTINCT ?concept ?prop "
+					+ "WHERE{"
+					+ "  {?prop rdfs:range ?concept; "
+					+ "    rdfs:domain <" + ontClass.getURI() + ">"
+					+ "  }"
+					+ "  UNION "
+					+ "  { "
+					+ "    <" + ontClass.getURI() + "> rdfs:subClassOf|owl:equivalentClass ?restriction . "
+					+ "    ?restriction a owl:Restriction; "
+					+ "      ?prop ?concept "
+					+ "  } "
+					+ "  FILTER(isIRI(?concept)) "
 					+ "}";
 			Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
 			QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
@@ -804,7 +872,7 @@ public class IndexingJob extends AbstractIndexingJob {
 				QuerySolution querySolution = resultSet.next();
 				Resource concept = querySolution.getResource("concept");
 				
-				stmts.add(new StatementImpl(ontClass, usage, concept));
+				stmts.add(new StatementImpl(ontClass, rangeUsage, concept));
 			}
 		} catch(Exception e){
 			log.error(e.getMessage(), e);

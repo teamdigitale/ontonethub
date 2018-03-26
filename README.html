@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Untitled Document.md</title><script type="text/javascript">
 //<![CDATA[
-window.__cfRocketOptions = {byc:0,p:1521556077,petok:"98d721f4664c1e924d42a063a7bdfaa64d500827-1521732502-1800"};
+window.__cfRocketOptions = {byc:0,p:1521556077,petok:"9cfc2977bac057f421fcf4d00228056ee917987d-1522060671-1800"};
 //]]>
 </script>
 <script type="text/javascript" src="https://ajax.cloudflare.com/cdn-cgi/scripts/935cb224/cloudflare-static/rocket.min.js"></script>
@@ -29,7 +29,7 @@ The following is an example of a <code>curl</code> request for uploading an onto
   -F name=person \
   -F description=&quot;The ontology for representing persons.&quot; \
   -F baseUri=http://data.gov.it/ontologies/person \
-  -F <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e98d889d88d4a9998c9b9a8687c79b8d8f">[email&#160;protected]</a> \
+  -F <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8de9ecf9ecb0cdfde8fffee2e3a3ffe9eb">[email&#160;protected]</a> \
   http://localhost:8000/stanbol/ontonethub/ontology
 </code></pre>
 <p>The request above returns the following JSON.</p>
@@ -92,9 +92,9 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
 <p>The output returned by the find method is a JSON array, whose elements are the results mathing the search. An example of possible ouput is the following:</p>
 <pre><code>[
     {
-        &quot;score&quot;: 1.6661632,
+        &quot;score&quot;: 1.8298779,
         &quot;ontology&quot;: {
-            &quot;id&quot;: &quot;wCM-S8BLSINkgaCpW8bsuQ&quot;,
+            &quot;id&quot;: &quot;wPeZgTJZ5BJK6CDwHbh4rw&quot;,
             &quot;label&quot;: [
                 {
                     &quot;value&quot;: &quot;Organizzazioni (Pubbliche e Private)&quot;,
@@ -103,9 +103,9 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
             ],
             &quot;comment&quot;: []
         },
-        &quot;context&quot;: {
+        &quot;universe&quot;: {
             &quot;value&quot;: &quot;COV-AP_IT.Organization.taxCode.Literal&quot;,
-            &quot;fingerprint&quot;: &quot;E4EB92CA54578D7C68D1FE72560E0370&quot;,
+            &quot;fingerprint&quot;: &quot;COV-AP_IT.Organization.taxCode.Literal&quot;,
             &quot;domain&quot;: {
                 &quot;id&quot;: &quot;https://w3id.org/italia/onto/COV/Organization&quot;,
                 &quot;label&quot;: [
@@ -120,7 +120,13 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
                         &quot;lang&quot;: &quot;it&quot;
                     }
                 ],
-                &quot;controlledVocabularies&quot;: []
+                &quot;controlledVocabularies&quot;: [],
+                &quot;contexts&quot;: [
+                    {
+                        &quot;id&quot;: &quot;https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization&quot;,
+                        &quot;label&quot;: &quot;CLV-AP_IT.Identifier.issuedBy.Organization&quot;
+                    }
+                ]
             },
             &quot;property&quot;: {
                 &quot;id&quot;: &quot;https://w3id.org/italia/onto/COV/taxCode&quot;,
@@ -146,7 +152,8 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
                     }
                 ],
                 &quot;comment&quot;: [],
-                &quot;controlledVocabularies&quot;: []
+                &quot;controlledVocabularies&quot;: [],
+                &quot;contexts&quot;: []
             }
         }
     }
@@ -167,21 +174,22 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
 <li>comment: the array of ontology comments. The array contains JSON object that represent literals using the schema <code>{value: string, lang: string}</code> as for labels.</li>
 </ul>
 </li>
-<li>context: provide the information that contextualises the result with repsect to the search query. Namely, a context provide information about a unviverse (domain - property - range) that mathces a possible term provided as input. The context is a JSON object defined as follows:
+<li>universe: provide the information that contextualises the result with repsect to the search query. Namely, a universe provide information about a the triple domain-property-range (aka subject-property-range) that mathces a possible term provided as input. The universe is a JSON object defined as follows:
 <ul>
 <li>value: the literal representation of the context, povided as ONTOLOGY.DOMAIN.PROPERTY.RANGE. An example of possible literal is “COV-AP_IT.Organization.taxCode.Literal”, where COV-AP_IT idenfies the ontology, Organization is the domaim, taxCode is the property, and Literal is the range;</li>
 <li>fingerprint: is the MD5 checksum of the context value;</li>
-<li>domain: is the JSON object that provides information about the domain returned in the context. The schema is <code>{id: string, label: object, comment: object}</code>, where:
+<li>domain: is the JSON object that provides information about the domain returned in the universe. The schema is <code>{id: string, label: object, comment: object}</code>, where:
 <ul>
 <li>id: is the URI that idenfies the domain class, e.g. <a href="https://w3id.org/italia/onto/COV/Organization">https://w3id.org/italia/onto/COV/Organization</a> ;</li>
 <li>label and comment: are literal objects represented as for the ontology object.</li>
-<li>controlledVocabularies: is the array of possible available controlled vocabularies that standardise the object of this type. Controlled vocabularies are returned as URIs provided as string, e.g. <a href="http://dati.gov.it/onto/controlledvocabulary/AccoStarRating">http://dati.gov.it/onto/controlledvocabulary/AccoStarRating</a> ;</li>
+<li>controlledVocabularies: is the array of possible available controlled vocabularies that standardise the object of this type. Controlled vocabularies are returned as URIs provided as string, e.g. <a href="http://dati.gov.it/onto/controlledvocabulary/AccoStarRating;">http://dati.gov.it/onto/controlledvocabulary/AccoStarRating;</a></li>
+<li>contexts: the list of contextes associated with a specific object. A context is a JSON object with the schema <code>{id:string, label:string}</code>. Basically a context is a reference to a universe that holds for a specific concept when the latter is used either as domain or as range in the universe that characterises a search result.</li>
 </ul>
 </li>
-<li>property: is the JSON object that provides information about the property returned in the context. The schema is <code>{id: string, label: object, comment: object, controlledVocabularies}</code> as previously defined;</li>
+<li>property: is the JSON object that provides information about the property returned in the universe. The schema is <code>{id: string, label: object, comment: object, controlledVocabularies}</code> as previously defined;</li>
 </ul>
 </li>
-<li>range: is the JSON object that provides information about the range returned in the context. The schema is <code>{id: string, label: object, comment: object, controlledVocabularies}</code> as previously defined.</li>
+<li>range: is the JSON object that provides information about the range returned in the universe. The schema is <code>{id: string, label: object, comment: object, controlledVocabularies, contexts}</code> as previously defined.</li>
 </ul>
 <p>In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to <code>http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find</code>, where <code>ontologyID</code> has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.</p>
 <p>Furthermore, it is possible to retrieve the context associated with a certain ontology entity. By context we mean the RDF representation of an entity, which is:</p>
@@ -193,7 +201,7 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
 <pre><code>curl -X GET -H &quot;Accept: application/json&quot; 'http://localhost:8080/stanbol/ontonethub/ontologies/context?id=http://dati.gov.it/onto/smapit/emailAddress&amp;lang=it' 
 </code></pre>
 <p>In such a request the parameter <code>id</code> identifies the entity and the parameter <code>lang</code> allows to retrieve literals, which are associated with the found context and defined in a specific language.</p>
-<h3><a id="Compiling_from_source_code_206"></a>Compiling from source code</h3>
+<h3><a id="Compiling_from_source_code_214"></a>Compiling from source code</h3>
 <p>The OnteNetHub is released along with the source code, which is available in the folder <code>ontonethub-src</code>. The source code is written in Java and can be built by using <a href="https://maven.apache.org/"><code>Maven</code></a>. The following command can be used for bulding the source code if executed by command line from the root of the <code>ontonethub-src</code> folder:</p>
 <pre><code>mvn clean install
 </code></pre>

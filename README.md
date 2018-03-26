@@ -113,9 +113,9 @@ The output returned by the find method is a JSON array, whose elements are the r
 ```
 [
     {
-        "score": 1.6661632,
+        "score": 1.8298779,
         "ontology": {
-            "id": "wCM-S8BLSINkgaCpW8bsuQ",
+            "id": "wPeZgTJZ5BJK6CDwHbh4rw",
             "label": [
                 {
                     "value": "Organizzazioni (Pubbliche e Private)",
@@ -124,9 +124,9 @@ The output returned by the find method is a JSON array, whose elements are the r
             ],
             "comment": []
         },
-        "context": {
+        "universe": {
             "value": "COV-AP_IT.Organization.taxCode.Literal",
-            "fingerprint": "E4EB92CA54578D7C68D1FE72560E0370",
+            "fingerprint": "COV-AP_IT.Organization.taxCode.Literal",
             "domain": {
                 "id": "https://w3id.org/italia/onto/COV/Organization",
                 "label": [
@@ -141,7 +141,13 @@ The output returned by the find method is a JSON array, whose elements are the r
                         "lang": "it"
                     }
                 ],
-                "controlledVocabularies": []
+                "controlledVocabularies": [],
+                "contexts": [
+                    {
+                        "id": "https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization",
+                        "label": "CLV-AP_IT.Identifier.issuedBy.Organization"
+                    }
+                ]
             },
             "property": {
                 "id": "https://w3id.org/italia/onto/COV/taxCode",
@@ -167,7 +173,8 @@ The output returned by the find method is a JSON array, whose elements are the r
                     }
                 ],
                 "comment": [],
-                "controlledVocabularies": []
+                "controlledVocabularies": [],
+                "contexts": []
             }
         }
     }
@@ -182,15 +189,16 @@ Where:
      - value: is the literal value;
      - lang: is the natural language for expressing the specific value.
    - comment: the array of ontology comments. The array contains JSON object that represent literals using the schema `{value: string, lang: string}` as for labels.
- - context: provide the information that contextualises the result with repsect to the search query. Namely, a context provide information about a unviverse (domain - property - range) that mathces a possible term provided as input. The context is a JSON object defined as follows:
+ - universe: provide the information that contextualises the result with repsect to the search query. Namely, a universe provide information about a the triple domain-property-range (aka subject-property-range) that mathces a possible term provided as input. The universe is a JSON object defined as follows:
    - value: the literal representation of the context, povided as ONTOLOGY.DOMAIN.PROPERTY.RANGE. An example of possible literal is "COV-AP_IT.Organization.taxCode.Literal", where COV-AP_IT idenfies the ontology, Organization is the domaim, taxCode is the property, and Literal is the range;
    - fingerprint: is the MD5 checksum of the context value;
-   - domain: is the JSON object that provides information about the domain returned in the context. The schema is `{id: string, label: object, comment: object}`, where:
+   - domain: is the JSON object that provides information about the domain returned in the universe. The schema is `{id: string, label: object, comment: object}`, where:
      - id: is the URI that idenfies the domain class, e.g. https://w3id.org/italia/onto/COV/Organization ;
      - label and comment: are literal objects represented as for the ontology object.
-     - controlledVocabularies: is the array of possible available controlled vocabularies that standardise the object of this type. Controlled vocabularies are returned as URIs provided as string, e.g. http://dati.gov.it/onto/controlledvocabulary/AccoStarRating ;
-   - property: is the JSON object that provides information about the property returned in the context. The schema is `{id: string, label: object, comment: object, controlledVocabularies}` as previously defined;
-  - range: is the JSON object that provides information about the range returned in the context. The schema is `{id: string, label: object, comment: object, controlledVocabularies}` as previously defined.
+     - controlledVocabularies: is the array of possible available controlled vocabularies that standardise the object of this type. Controlled vocabularies are returned as URIs provided as string, e.g. http://dati.gov.it/onto/controlledvocabulary/AccoStarRating;
+     - contexts: the list of contextes associated with a specific object. A context is a JSON object with the schema `{id:string, label:string}`. Basically a context is a reference to a universe that holds for a specific concept when the latter is used either as domain or as range in the universe that characterises a search result.
+   - property: is the JSON object that provides information about the property returned in the universe. The schema is `{id: string, label: object, comment: object, controlledVocabularies}` as previously defined;
+  - range: is the JSON object that provides information about the range returned in the universe. The schema is `{id: string, label: object, comment: object, controlledVocabularies, contexts}` as previously defined.
 
 In order to query a specific ontology instead of the whole set of ontologies managed by the OntoNetHub the path of the requests has to be set to `http://localhost:8000/stanbol/ontonethub/ontology/{ontologyID}/find`, where `ontologyID` has to be replaced with a proper ontology identifier, e.g. 44HDRw9NEKK4gAfQprG_ZQ as used in previous examples.
 
