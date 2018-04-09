@@ -1,8 +1,6 @@
 package it.cnr.istc.stlab.ontonethub.web.adapter;
 
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Service;
@@ -18,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import com.hp.hpl.jena.rdf.model.Resource;
 import com.hp.hpl.jena.rdf.model.ResourceFactory;
+import com.hp.hpl.jena.vocabulary.RDFS;
 
 import it.cnr.istc.stlab.ontonethub.solr.OntoNetHubSiteManager;
 
@@ -95,26 +94,26 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     	it = representation.get("http://dati.gov.it/onto/ann-voc/universeSignature");
     	if(it.hasNext()){
     		Text contextTriple = (Text) it.next();
-    		JSONObject contextObj = new JSONObject();
-    		obj.put("universe", contextObj);
+    		JSONObject universeObj = new JSONObject();
+    		obj.put("universe", universeObj);
     		
-    		contextObj.put("value", contextTriple.getText());
+    		universeObj.put("value", contextTriple.getText());
     		
     		Iterator<Object> fingerprintIt = representation.get("http://dati.gov.it/onto/ann-voc/universeFingerprint");
     		if(fingerprintIt.hasNext()){
     			String fingerprint = ((Text) fingerprintIt.next()).getText();
-    			contextObj.put("fingerprint", fingerprint);
+    			universeObj.put("fingerprint", fingerprint);
     		}
     		
-    		Iterator<Object> contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeDomain");
-    		if(contextIt.hasNext()){
-    			org.apache.stanbol.entityhub.servicesapi.model.Reference domain = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
-    			JSONObject contextDomainObj = new JSONObject();
-    			contextObj.put("domain", contextDomainObj);
-    			contextDomainObj.put("id", domain.getReference());
+    		Iterator<Object> universeIt = representation.get("http://dati.gov.it/onto/ann-voc/universeDomain");
+    		if(universeIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference domain = (org.apache.stanbol.entityhub.servicesapi.model.Reference)universeIt.next();
+    			JSONObject universeDomainObj = new JSONObject();
+    			universeObj.put("domain", universeDomainObj);
+    			universeDomainObj.put("id", domain.getReference());
     			
     			JSONArray domainLabels = new JSONArray();
-    			contextDomainObj.put("label", domainLabels);
+    			universeDomainObj.put("label", domainLabels);
     			Iterator<Text> domainIt = representation.get("http://dati.gov.it/onto/ann-voc/domainLabel", lang);
     			while(domainIt.hasNext()){
     				Text text = domainIt.next();
@@ -135,7 +134,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			}
     			
     			JSONArray domainComments = new JSONArray();
-    			contextDomainObj.put("comment", domainComments);
+    			universeDomainObj.put("comment", domainComments);
     			domainIt = representation.get("http://dati.gov.it/onto/ann-voc/domainComment", lang);
     			while(domainIt.hasNext()){
     				Text text = domainIt.next();
@@ -150,7 +149,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/domainControlledVocabulary");
     			JSONArray controlledVocabulariesArr = new JSONArray();
-    			contextDomainObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			universeDomainObj.put("controlledVocabularies", controlledVocabulariesArr);
     			while(cvIt.hasNext()){
     				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
     				controlledVocabulariesArr.put(cv.getReference());
@@ -158,14 +157,14 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			/*
     			 * Here we compute what is called context by DAF for the domain class.
-    			 */
+    			 *
     			Entity domainEntity = manager.getEntity(domain.getReference());
     			JSONArray contexts = new JSONArray();
     			Map<String,JSONObject> objs = new HashMap<String,JSONObject>();
-    			contextDomainObj.put("contexts", contexts);
+    			universeDomainObj.put("contexts", contexts);
     			if(domainEntity != null){
 	    			Representation domainRepresentation = domainEntity.getRepresentation();
-	    			Iterator<Object> domainContextes = domainRepresentation.get("http://dati.gov.it/onto/ann-voc/isRangeOfUniverse");
+	    			Iterator<Object> domainContextes = domainRepresentation.get("http://dati.gov.it/onto/ann-voc/hasContext");
 	    			while(domainContextes.hasNext()){
 	    				JSONObject ctxObj = new JSONObject();
 	    				
@@ -187,19 +186,20 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			for(JSONObject jsonObject : objs.values())
     				contexts.put(jsonObject);
+    				*/
     			
     			
     		}
     		
-    		contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeProperty");
-    		if(contextIt.hasNext()){
-    			org.apache.stanbol.entityhub.servicesapi.model.Reference property = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
-    			JSONObject contextPropertyObj = new JSONObject();
-    			contextObj.put("property", contextPropertyObj);
-    			contextPropertyObj.put("id", property.getReference());
+    		universeIt = representation.get("http://dati.gov.it/onto/ann-voc/universeProperty");
+    		if(universeIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference property = (org.apache.stanbol.entityhub.servicesapi.model.Reference)universeIt.next();
+    			JSONObject universePropertyObj = new JSONObject();
+    			universeObj.put("property", universePropertyObj);
+    			universePropertyObj.put("id", property.getReference());
     			
     			JSONArray propertyLabels = new JSONArray();
-    			contextPropertyObj.put("label", propertyLabels);
+    			universePropertyObj.put("label", propertyLabels);
     			Iterator<Text> propertyIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyLabel", lang);
     			while(propertyIt.hasNext()){
     				Text text = propertyIt.next();
@@ -220,7 +220,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			}
     			
     			JSONArray propertyComments = new JSONArray();
-    			contextPropertyObj.put("comment", propertyComments);
+    			universePropertyObj.put("comment", propertyComments);
     			propertyIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyComment", lang);
     			while(propertyIt.hasNext()){
     				Text text = propertyIt.next();
@@ -235,7 +235,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/propertyControlledVocabulary");
     			JSONArray controlledVocabulariesArr = new JSONArray();
-    			contextPropertyObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			universePropertyObj.put("controlledVocabularies", controlledVocabulariesArr);
     			while(cvIt.hasNext()){
     				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
     				controlledVocabulariesArr.put(cv.getReference());
@@ -243,15 +243,15 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     		}
     		
-    		contextIt = representation.get("http://dati.gov.it/onto/ann-voc/universeRange");
-    		if(contextIt.hasNext()){
-    			org.apache.stanbol.entityhub.servicesapi.model.Reference range = (org.apache.stanbol.entityhub.servicesapi.model.Reference)contextIt.next();
-    			JSONObject contextRangeObj = new JSONObject();
-    			contextObj.put("range", contextRangeObj);
-    			contextRangeObj.put("id", range.getReference());
+    		universeIt = representation.get("http://dati.gov.it/onto/ann-voc/universeRange");
+    		if(universeIt.hasNext()){
+    			org.apache.stanbol.entityhub.servicesapi.model.Reference range = (org.apache.stanbol.entityhub.servicesapi.model.Reference)universeIt.next();
+    			JSONObject universeRangeObj = new JSONObject();
+    			universeObj.put("range", universeRangeObj);
+    			universeRangeObj.put("id", range.getReference());
     			
     			JSONArray rangeLabels = new JSONArray();
-    			contextRangeObj.put("label", rangeLabels);
+    			universeRangeObj.put("label", rangeLabels);
     			Iterator<Text> rangeIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeLabel", lang);
     			while(rangeIt.hasNext()){
     				Text text = rangeIt.next();
@@ -272,7 +272,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			}
     			
     			JSONArray rangeComments = new JSONArray();
-    			contextRangeObj.put("comment", rangeComments);
+    			universeRangeObj.put("comment", rangeComments);
     			rangeIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeComment", lang);
     			while(rangeIt.hasNext()){
     				Text text = rangeIt.next();
@@ -287,7 +287,7 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			Iterator<Object> cvIt = representation.get("http://dati.gov.it/onto/ann-voc/rangeControlledVocabulary");
     			JSONArray controlledVocabulariesArr = new JSONArray();
-    			contextRangeObj.put("controlledVocabularies", controlledVocabulariesArr);
+    			universeRangeObj.put("controlledVocabularies", controlledVocabulariesArr);
     			while(cvIt.hasNext()){
     				org.apache.stanbol.entityhub.servicesapi.model.Reference cv = (org.apache.stanbol.entityhub.servicesapi.model.Reference)cvIt.next();
     				controlledVocabulariesArr.put(cv.getReference());
@@ -295,10 +295,10 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			/*
     			 * Here we compute what is called context by DAF for the range class.
-    			 */
+    			 *
     			Entity rangeEntity = manager.getEntity(range.getReference());
     			JSONArray contexts = new JSONArray();
-    			contextRangeObj.put("contexts", contexts);
+    			universeRangeObj.put("contexts", contexts);
     			Map<String,JSONObject> objs = new HashMap<String,JSONObject>();
     			if(rangeEntity != null){
 	    			Representation rangeRepresentation = rangeEntity.getRepresentation();
@@ -321,9 +321,33 @@ public class Representation2JSONAdapter implements RepresentationAdapter {
     			
     			for(JSONObject jsonObject : objs.values())
     				contexts.put(jsonObject);
+    				*/
     			
     		}
     		
+    	}
+    	
+    	JSONArray contexts = new JSONArray();
+    	obj.put("contexts", contexts);
+    	it = representation.get("http://dati.gov.it/onto/ann-voc/hasContext");
+    	while(it.hasNext()){
+    		org.apache.stanbol.entityhub.servicesapi.model.Reference contextReference = (org.apache.stanbol.entityhub.servicesapi.model.Reference)it.next();
+    		Entity contextEntity = manager.getEntity(contextReference.getReference());
+    		
+    		JSONObject context = new JSONObject();
+    		Representation contextRepresentation = contextEntity.getRepresentation();
+			Iterator<Object> contextId = contextRepresentation.get("http://dati.gov.it/onto/ann-voc/contextId");
+			if(contextId.hasNext()){
+				context.put("id", contextReference.getReference());
+				context.put("label", ((Text)contextId.next()).getText());
+			}
+			
+			Iterator<Text> contextLabel = contextRepresentation.get(RDFS.label.getURI(), lang);
+			if(contextLabel.hasNext()){
+				context.put("humanlabel", contextLabel.next().getText());
+			}
+			
+			contexts.put(context);
     	}
     	return (T) obj;
     }

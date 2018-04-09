@@ -54,6 +54,9 @@ public class OntologyDescriptionVocabulary {
 	public static String UNIVERSE_RANGE= NS + "universeRange";
 	public static String IS_DOMAIN_OF_UNIVERSE = NS + "isDomainOfUniverse";
 	public static String IS_RANGE_OF_UNIVERSE = NS + "isRangeOfUniverse";
+	public static String UNIVERSE = NS + "Universe";
+	public static String CONTEXT_ID = NS + "contextId";
+	public static String HAS_CONTEXT = NS + "hasContext";
 	
 	public static Property domainClassLabel = ResourceFactory.createProperty(DOMAIN_CLASS_LABEL);
 	public static Property domainClassComment = ResourceFactory.createProperty(DOMAIN_CLASS_COMMENT);
@@ -72,6 +75,7 @@ public class OntologyDescriptionVocabulary {
 	public static Property propertyComment = ResourceFactory.createProperty(PROPERTY_COMMENT);
 	public static Property rangeComment = ResourceFactory.createProperty(RANGE_COMMENT);
 	public static Resource context = ResourceFactory.createResource(CONTEXT);
+	public static Resource universe = ResourceFactory.createResource(UNIVERSE);
 	public static Property universeSignature = ResourceFactory.createProperty(UNIVERSE_SIGNATURE);
 	public static Property universeFingerprint = ResourceFactory.createProperty(UNIVERSE_FINGERPRINT);
 	public static Property definedInOntology = ResourceFactory.createProperty(DEFINED_IN_ONTOLOGY);
@@ -83,6 +87,8 @@ public class OntologyDescriptionVocabulary {
 	public static Property universeDomain = ResourceFactory.createProperty(UNIVERSE_DOMAIN);
 	public static Property universeProperty = ResourceFactory.createProperty(UNIVERSE_PROPERTY);
 	public static Property universeRange = ResourceFactory.createProperty(UNIVERSE_RANGE);
+	public static Property contextID = ResourceFactory.createProperty(CONTEXT_ID);
+	public static Property hasContext = ResourceFactory.createProperty(HAS_CONTEXT);
 	
 	
 }

@@ -247,7 +247,7 @@
 	  <version>2.6.3</version>
 	</dependency>
 	
-	<!--  Apache Jena ARQ -->
+	<!--  Apache Jena ARQ 
 	<dependency>
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-arq</artifactId>
@@ -258,7 +258,7 @@
       <groupId>org.apache.jena</groupId>
       <artifactId>jena-tdb</artifactId>
       <version>1.0.2</version>
-	</dependency>
+	</dependency> -->
 	
 	<!-- Guava -->
 	<dependency>
@@ -297,6 +297,12 @@
       <artifactId>lucene-queryparser</artifactId>
       <version>7.1.0</version>
 	</dependency -->
+	<!-- https://mvnrepository.com/artifact/xerces/xercesImpl -->
+	<dependency>
+      <groupId>xerces</groupId>
+      <artifactId>xercesImpl</artifactId>
+      <version>2.11.0</version>
+    </dependency>
 	
 	
 	

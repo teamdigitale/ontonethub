@@ -24,6 +24,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,7 @@ import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.Syntax;
+import com.hp.hpl.jena.rdf.model.InfModel;
 import com.hp.hpl.jena.rdf.model.Literal;
 import com.hp.hpl.jena.rdf.model.Model;
 import com.hp.hpl.jena.rdf.model.ModelFactory;
@@ -87,8 +89,12 @@ import com.hp.hpl.jena.rdf.model.ResourceFactory;
 import com.hp.hpl.jena.rdf.model.Statement;
 import com.hp.hpl.jena.rdf.model.StmtIterator;
 import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
+import com.hp.hpl.jena.reasoner.Reasoner;
+import com.hp.hpl.jena.reasoner.rulesys.GenericRuleReasoner;
+import com.hp.hpl.jena.reasoner.rulesys.Rule;
 import com.hp.hpl.jena.util.iterator.ExtendedIterator;
 import com.hp.hpl.jena.util.iterator.Filter;
+import com.hp.hpl.jena.vocabulary.OWL2;
 import com.hp.hpl.jena.vocabulary.RDFS;
 
 import freemarker.cache.ClassTemplateLoader;
@@ -215,7 +221,8 @@ public class IndexingJob extends AbstractIndexingJob {
 				String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
 				
 				OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
-				ontModel.add(data);
+				log.info("Base URI is {}", baseURI);
+				ontModel.read(baseURI);
 				
 				keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.label, ontModel);
 				keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.comment, ontModel);
@@ -239,6 +246,11 @@ public class IndexingJob extends AbstractIndexingJob {
 				try{
 					log.debug("Running indexing subprocess {}", ontologyName);
 					
+					OntologyContextFactory ontologyContextFactory = new OntologyContextFactory();
+					Map<String, Set<String>> propContextMap = ontologyContextFactory.getContexts(ontModel);
+					IndexingModelFactory indexingModelFactory = new IndexingModelFactory(propContextMap);
+					
+					log.info("§§§§§ {} has a context map for {} properties", ontologyName, propContextMap.size());
 					
 					Model indexingModel = ModelFactory.createDefaultModel();
 					
@@ -249,7 +261,7 @@ public class IndexingJob extends AbstractIndexingJob {
 						Property property = ontModel.getProperty(querySolution.getResource("property").getURI());
 						Resource range = ontModel.getResource(querySolution.getResource("range").getURI());
 						
-						indexingModel.add(IndexingModelFactory.create(jobId, ontologyName, domain, property, range));
+						indexingModel.add(indexingModelFactory.create(jobId, ontologyName, domain, property, range));
 						
 						
 						List<Statement> stmts = getDomainUsage(ModelFactory.createOntologyModel().createClass(domain.getURI()), ontModel);
@@ -814,7 +826,7 @@ public class IndexingJob extends AbstractIndexingJob {
 		try{
 			String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
 					+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
-					+ "SELECT DISTINCT ?concept ?prop"
+					+ "SELECT DISTINCT ?concept ?prop "
 					+ "WHERE{"
 					+ "  {?prop rdfs:range <" + ontClass.getURI() + ">; "
 					+ "    rdfs:domain ?concept"
@@ -823,7 +835,8 @@ public class IndexingJob extends AbstractIndexingJob {
 					+ "  { "
 					+ "    ?concept rdfs:subClassOf|owl:equivalentClass ?restriction . "
 					+ "    ?restriction a owl:Restriction; "
-					+ "      ?prop <" + ontClass.getURI() + "> "
+					+ "      ?restr <" + ontClass.getURI() + ">;"
+					+ "      owl:onProperty ?prop"
 					+ "  } "
 					+ "  FILTER(isIRI(?concept)) "
 					+ "}";
@@ -860,7 +873,8 @@ public class IndexingJob extends AbstractIndexingJob {
 					+ "  { "
 					+ "    <" + ontClass.getURI() + "> rdfs:subClassOf|owl:equivalentClass ?restriction . "
 					+ "    ?restriction a owl:Restriction; "
-					+ "      ?prop ?concept "
+					+ "      ?restr ?concept;"
+					+ " 	 owl:onProperty ?prop"
 					+ "  } "
 					+ "  FILTER(isIRI(?concept)) "
 					+ "}";
@@ -880,6 +894,82 @@ public class IndexingJob extends AbstractIndexingJob {
 		
 		return stmts;
 		
+	}
+	
+	public static void main(String[] args) {
+		OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
+		ontModel.read("file:///Users/andrea/git/daf-ontologie-vocabolari-controllati/Ontologie/CPV/0.5/CPV-AP_IT.rdf");
+		
+		
+		String rules = "[r1: (?p2 rdfs:range ?c) <- (?p1 rdfs:subPropertyOf ?p2) (?p1 rdfs:range ?c)] "
+				+ "[r2: (?restriction owl:onProperty ?p2) <- (?p1 rdfs:subPropertyOf ?p2) (?restriction owl:onProperty ?p1)] ";
+		Reasoner reasoner = new GenericRuleReasoner(Rule.parseRules(rules));
+		InfModel infModel = ModelFactory.createInfModel(reasoner, ontModel);
+		
+		infModel.prepare();
+		
+		
+		
+		OntClass ontClass = ontModel.getOntClass("https://w3id.org/italia/onto/CLV/City");
+		List<Resource> resources = new ArrayList<Resource>();
+		resources.add(ontClass);
+		ontClass.listSuperClasses().forEachRemaining(ontC -> {
+			if(ontC.isURIResource()) 
+				resources.add(ontC);}
+		);
+		
+		Set<Resource> visited = new HashSet<Resource>();
+		while(!resources.isEmpty()){
+			Resource c = resources.remove(0);
+			if(!c.equals(OWL2.Thing) && !visited.contains(c)){
+				System.out.println(c);	
+				visited.add(c);
+				resources.addAll(query(c, infModel, ontModel));
+			}
+			
+		}
+		
+		
+		
+	}
+	
+	private static List<Resource> query(Resource concept, Model model, OntModel ontModel){
+		String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> "
+				+ "PREFIX owl: <http://www.w3.org/2002/07/owl#> "
+				+ "SELECT DISTINCT ?concept ?prop "
+				+ "WHERE{"
+				+ "  {?prop rdfs:range <" + concept.getURI() + ">; "
+				+ "    rdfs:domain ?concept"
+				+ "  }"
+				+ "  UNION "
+				+ "  { "
+				+ "    ?concept rdfs:subClassOf|owl:equivalentClass ?restriction . "
+				+ "    ?restriction a owl:Restriction; "
+				+ "      ?restr <" + concept.getURI() + ">;"
+				+ "      owl:onProperty ?prop"
+				+ "  } "
+				+ "  FILTER(isIRI(?concept)) "
+				+ "}";
+		Query query = QueryFactory.create(sparql, Syntax.syntaxARQ);
+		QueryExecution queryExecution = QueryExecutionFactory.create(query, model);
+		
+		ResultSet resultSet = queryExecution.execSelect();
+		List<Resource> resources = new ArrayList<Resource>();
+		while(resultSet.hasNext()){
+			QuerySolution querySolution = resultSet.next();
+			Resource c = querySolution.getResource("concept");
+			
+			resources.add(c);
+			
+			OntClass ontClass = ontModel.getOntClass(c.getURI());
+			ontClass.listSuperClasses().forEachRemaining(ontC -> {
+				if(ontC.isURIResource()) 
+					resources.add(ontC);}
+			);
+			
+		}
+		
+		return resources;
 	}
 	
 

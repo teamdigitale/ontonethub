@@ -141,13 +141,7 @@ The output returned by the find method is a JSON array, whose elements are the r
                         "lang": "it"
                     }
                 ],
-                "controlledVocabularies": [],
-                "contexts": [
-                    {
-                        "id": "https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization",
-                        "label": "CLV-AP_IT.Identifier.issuedBy.Organization"
-                    }
-                ]
+                "controlledVocabularies": []
             },
             "property": {
                 "id": "https://w3id.org/italia/onto/COV/taxCode",
@@ -173,10 +167,16 @@ The output returned by the find method is a JSON array, whose elements are the r
                     }
                 ],
                 "comment": [],
-                "controlledVocabularies": [],
-                "contexts": []
+                "controlledVocabularies": []
             }
-        }
+        },
+        "contexts": [
+            {
+                "id": "https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization",
+                "label": "CLV-AP_IT.Identifier.issuedBy.Organization",
+                "humanlabel": "'rilasciato' da associato Identificativo."
+            }
+        ]
     }
 ]
 ```

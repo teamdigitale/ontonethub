@@ -4,8 +4,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 
@@ -33,8 +35,13 @@ public class IndexingModelFactory {
 	private static Logger log = LoggerFactory.getLogger(IndexingModelFactory.class);
 
 	private static Property L0_CONTROLLED_VOCABULARY = ResourceFactory.createProperty("https://w3id.org/italia/onto/l0/controlledVocabulary");
+	private Map<String, Set<String>> propContextMap;
 	
-	public static Model create(String ontologyId, String ontologyName, Resource domain, Property property, Resource range){
+	public IndexingModelFactory(Map<String, Set<String>> propContextMap) {
+		this.propContextMap = propContextMap;
+	}
+	
+	public Model create(String ontologyId, String ontologyName, Resource domain, Property property, Resource range){
 		
 		Model model = ModelFactory.createDefaultModel();
 		Model sourceModel = domain.getModel();
@@ -61,11 +68,11 @@ public class IndexingModelFactory {
 			String rangeLocalname = range.getLocalName();
 			
 			//String contextId = property.getNameSpace() + 
-			String contextId = ontologyName + "." + domainLocalname + "." + propertyLocalname + "." + rangeLocalname;
+			String universeId = ontologyName + "." + domainLocalname + "." + propertyLocalname + "." + rangeLocalname;
 			
 			
 			
-			String contextIdHex = null;
+			String universeIdHex = null;
 			/*
 			try {
 				contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest((domainLocalname + "." + propertyLocalname + "." + rangeLocalname).getBytes()));
@@ -73,77 +80,148 @@ public class IndexingModelFactory {
 				contextIdHex = domainLocalname + "." + propertyLocalname + "." + rangeLocalname;
 			}
 			*/
-			contextIdHex = contextId;
+			universeIdHex = universeId;
 			
-			Resource context = ResourceFactory.createResource(property.getNameSpace() + contextIdHex);
+			Resource universe = ResourceFactory.createResource(property.getNameSpace() + universeIdHex);
 			
-			model.add(context, RDF.type, OntologyDescriptionVocabulary.context);
-			model.add(context, OntologyDescriptionVocabulary.universeDomain, domain);
-			model.add(domain, OntologyDescriptionVocabulary.isDomainOfUniverse, context);
+			model.add(universe, RDF.type, OntologyDescriptionVocabulary.universe);
+			model.add(universe, OntologyDescriptionVocabulary.universeDomain, domain);
+			model.add(domain, OntologyDescriptionVocabulary.isDomainOfUniverse, universe);
 			model.add(domain, RDF.type, OWL2.Class);
-			model.add(context, OntologyDescriptionVocabulary.universeProperty, property);
-			model.add(context, OntologyDescriptionVocabulary.universeRange, range);
-			model.add(range, OntologyDescriptionVocabulary.isRangeOfUniverse, context);
+			model.add(universe, OntologyDescriptionVocabulary.universeProperty, property);
+			model.add(universe, OntologyDescriptionVocabulary.universeRange, range);
+			model.add(range, OntologyDescriptionVocabulary.isRangeOfUniverse, universe);
 			model.add(range, RDF.type, OWL2.Class);
-			model.add(context, OntologyDescriptionVocabulary.definedInOntology, ontology);
-			model.add(context, OntologyDescriptionVocabulary.universeSignature, ResourceFactory.createPlainLiteral(contextId));
-			model.add(context, OntologyDescriptionVocabulary.universeFingerprint, ResourceFactory.createPlainLiteral(contextIdHex));
+			model.add(universe, OntologyDescriptionVocabulary.definedInOntology, ontology);
+			model.add(universe, OntologyDescriptionVocabulary.universeSignature, ResourceFactory.createPlainLiteral(universeId));
+			model.add(universe, OntologyDescriptionVocabulary.universeFingerprint, ResourceFactory.createPlainLiteral(universeIdHex));
 			
-			model.add(context, OntologyDescriptionVocabulary.ontologyId, ResourceFactory.createPlainLiteral(ontologyId));
+			model.add(universe, OntologyDescriptionVocabulary.ontologyId, ResourceFactory.createPlainLiteral(ontologyId));
+			
+			Set<String> contexts = propContextMap.get(property.getURI());
+			if(contexts != null){
+				for(String context : contexts){
+					String contextIdHex;
+					try {
+						contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest(context.getBytes()));
+					} catch (NoSuchAlgorithmException e) {
+						contextIdHex = context;
+					}
+					Resource contextResource = ResourceFactory.createResource(property.getNameSpace() + contextIdHex);
+					
+					model.add(universe, OntologyDescriptionVocabulary.hasContext, contextResource);
+					model.add(contextResource, RDF.type, OntologyDescriptionVocabulary.context);
+					
+					
+					StringBuilder ctxIdSb = new StringBuilder();
+					for(String stPart : context.split(" \\. ")){
+						stPart = stPart.trim();
+						Resource stPartResource = ResourceFactory.createProperty(stPart);
+						if(ctxIdSb.length() > 0) ctxIdSb.append(".");
+						ctxIdSb.append(stPartResource.getLocalName());
+					}
+					
+					model.add(contextResource, OntologyDescriptionVocabulary.contextID, ctxIdSb.toString());
+					
+					int index = context.indexOf(" .");
+					String contextClass = context.substring(0, index).trim();
+					Resource contextClassResource = sourceModel.getResource(contextClass);
+					StmtIterator propLbs = property.listProperties(RDFS.label);
+					StmtIterator ctxLbs = contextClassResource.listProperties(RDFS.label);
+					Set<Literal> probLabels = new HashSet<Literal>();
+					Set<Literal> dmnLabels = new HashSet<Literal>();
+					
+					propLbs.forEachRemaining(propLb -> {
+						Literal propLbLiteral = propLb.getObject().asLiteral();
+						probLabels.add(propLbLiteral);
+					});
+					ctxLbs.forEachRemaining(ctxLb -> {
+						Literal ctxLbLiteral = ctxLb.getObject().asLiteral();
+						dmnLabels.add(ctxLbLiteral);
+					});
+					for(Literal probLabel : probLabels){
+						for(Literal dmnLabel : dmnLabels){
+							String probLabelLang = probLabel.getLanguage();
+							String dmnLabelLang = dmnLabel.getLanguage();
+							Literal contextLabel = null;
+							if(probLabelLang.equals(dmnLabelLang)){
+								String contextLabelString = null;
+								if(probLabelLang.equals("it")){
+									contextLabelString = "\"" + probLabel.getLexicalForm() + "\" ricondicibile a \"" + dmnLabel.getLexicalForm() + "\"";
+									
+								}
+								else {
+									contextLabelString = "\"" + probLabel.getLexicalForm() + "\" associated with \"" + dmnLabel.getLexicalForm() + "\"";
+								}
+								contextLabel = ResourceFactory.createLangLiteral(contextLabelString, probLabelLang);
+								
+								model.add(contextResource, RDFS.label, contextLabel);
+							}
+							
+						}
+					}
+				}
+			}
 			
 			/* LABELS */
 			for(Literal literal : ontologyLabels)
-				model.add(context, OntologyDescriptionVocabulary.ontologyLabel, literal);
+				model.add(universe, OntologyDescriptionVocabulary.ontologyLabel, literal);
 			
 			if(domainLabels.size() == 0)
-				model.add(context, OntologyDescriptionVocabulary.domainLabel, domainLocalname);
+				model.add(universe, OntologyDescriptionVocabulary.domainLabel, domainLocalname);
 			else{
 				for(Literal literal : domainLabels)
-					model.add(context, OntologyDescriptionVocabulary.domainLabel, literal);
+					model.add(universe, OntologyDescriptionVocabulary.domainLabel, literal);
 			}
 			if(propertyLabels.size() == 0)
-				model.add(context, OntologyDescriptionVocabulary.propertyLabel, propertyLocalname);
+				model.add(universe, OntologyDescriptionVocabulary.propertyLabel, propertyLocalname);
 			else{
 				for(Literal literal : propertyLabels)
-					model.add(context, OntologyDescriptionVocabulary.propertyLabel, literal);
+					model.add(universe, OntologyDescriptionVocabulary.propertyLabel, literal);
 			}
 			if(rangeLabels.size() == 0)
-				model.add(context, OntologyDescriptionVocabulary.rangeLabel, rangeLocalname);
+				model.add(universe, OntologyDescriptionVocabulary.rangeLabel, rangeLocalname);
 			else{
 				for(Literal literal : rangeLabels)
-					model.add(context, OntologyDescriptionVocabulary.rangeLabel, literal);
+					model.add(universe, OntologyDescriptionVocabulary.rangeLabel, literal);
 			}
 			
 			/* COMMENTS */
 			for(Literal literal : ontologyComments)
-				model.add(context, OntologyDescriptionVocabulary.ontologyComment, literal);
+				model.add(universe, OntologyDescriptionVocabulary.ontologyComment, literal);
 			for(Literal literal : listLiteralPropertyValues(domain, RDFS.comment))
-				model.add(context, OntologyDescriptionVocabulary.domainComment, literal);
+				model.add(universe, OntologyDescriptionVocabulary.domainComment, literal);
 			for(Literal literal : listLiteralPropertyValues(property, RDFS.comment))
-				model.add(context, OntologyDescriptionVocabulary.propertyComment, literal);
+				model.add(universe, OntologyDescriptionVocabulary.propertyComment, literal);
 			for(Literal literal : listLiteralPropertyValues(range, RDFS.comment))
-				model.add(context, OntologyDescriptionVocabulary.rangeComment, literal);
+				model.add(universe, OntologyDescriptionVocabulary.rangeComment, literal);
 			
 			/* CONTROLLED VOCABULARIES */
 			StmtIterator stmtIt = domain.listProperties(L0_CONTROLLED_VOCABULARY);
 			while(stmtIt.hasNext()){
 				Statement s = stmtIt.next();
-				model.add(context, OntologyDescriptionVocabulary.domainControlledVocabulary, s.getObject());
+				model.add(universe, OntologyDescriptionVocabulary.domainControlledVocabulary, s.getObject());
 			}
 			stmtIt = property.listProperties(L0_CONTROLLED_VOCABULARY);
 			while(stmtIt.hasNext()){
 				Statement s = stmtIt.next();
-				model.add(context, OntologyDescriptionVocabulary.propertyControlledVocabulary, s.getObject());
+				model.add(universe, OntologyDescriptionVocabulary.propertyControlledVocabulary, s.getObject());
 			}
 			stmtIt = range.listProperties(L0_CONTROLLED_VOCABULARY);
 			while(stmtIt.hasNext()){
 				Statement s = stmtIt.next();
-				model.add(context, OntologyDescriptionVocabulary.rangeControlledVocabulary, s.getObject());
+				model.add(universe, OntologyDescriptionVocabulary.rangeControlledVocabulary, s.getObject());
 			}
 			
 			/* SYNONYMS */
-			Map<String, List<String>> synonymsMap = new HashMap<String, List<String>>();
 			
+			/*
+			for(Literal propertySyn : propertySynonyms)
+			model.add(universe, OntologyDescriptionVocabulary.synonym, propertySyn);
+			*/
+			
+			
+			Map<String, List<String>> synonymsMap = new HashMap<String, List<String>>();
 			for(Literal propertySyn : propertySynonyms){
 				String propSynLang = propertySyn.getLanguage();
 				String propSynValue = propertySyn.getLexicalForm();
@@ -166,6 +244,7 @@ public class IndexingModelFactory {
 						String propDomainValue = propSynValue + " " + domainSynValue;
 						
 						boolean foundRangeLabel = false;
+						/*
 						for(Literal rangeSyn : rangeSynonyms){
 							String rangeSynLang = rangeSyn.getLanguage();
 							String rangeSynValue = rangeSyn.getLexicalForm();
@@ -175,6 +254,7 @@ public class IndexingModelFactory {
 								values.add(propDomainValue + " " + rangeSynValue);
 							}
 						}
+						*/
 						if(!foundRangeLabel)
 							values.add(propDomainValue);
 					}
@@ -196,7 +276,7 @@ public class IndexingModelFactory {
 					}
 					else literal = ResourceFactory.createLangLiteral(value, lang);
 					
-					model.add(context, OntologyDescriptionVocabulary.synonym, literal);
+					model.add(universe, OntologyDescriptionVocabulary.synonym, literal);
 				}
 			}
 				

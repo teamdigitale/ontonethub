@@ -1,6 +1,6 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>Untitled Document.md</title><script type="text/javascript">
 //<![CDATA[
-window.__cfRocketOptions = {byc:0,p:1521556077,petok:"9cfc2977bac057f421fcf4d00228056ee917987d-1522060671-1800"};
+window.__cfRocketOptions = {byc:0,p:0,petok:"8f223d3233c3ea2e9a7fa6f4c2d76f0255058690-1523265149-1800"};
 //]]>
 </script>
 <script type="text/javascript" src="https://ajax.cloudflare.com/cdn-cgi/scripts/935cb224/cloudflare-static/rocket.min.js"></script>
@@ -29,7 +29,7 @@ The following is an example of a <code>curl</code> request for uploading an onto
   -F name=person \
   -F description=&quot;The ontology for representing persons.&quot; \
   -F baseUri=http://data.gov.it/ontologies/person \
-  -F <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="8de9ecf9ecb0cdfde8fffee2e3a3ffe9eb">[email&#160;protected]</a> \
+  -F <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="f397928792ceb3839681809c9ddd819795">[email&#160;protected]</a> \
   http://localhost:8000/stanbol/ontonethub/ontology
 </code></pre>
 <p>The request above returns the following JSON.</p>
@@ -120,13 +120,7 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
                         &quot;lang&quot;: &quot;it&quot;
                     }
                 ],
-                &quot;controlledVocabularies&quot;: [],
-                &quot;contexts&quot;: [
-                    {
-                        &quot;id&quot;: &quot;https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization&quot;,
-                        &quot;label&quot;: &quot;CLV-AP_IT.Identifier.issuedBy.Organization&quot;
-                    }
-                ]
+                &quot;controlledVocabularies&quot;: []
             },
             &quot;property&quot;: {
                 &quot;id&quot;: &quot;https://w3id.org/italia/onto/COV/taxCode&quot;,
@@ -152,10 +146,16 @@ number of owlClasses, objectProperties, datatypeProperties, annotationProperties
                     }
                 ],
                 &quot;comment&quot;: [],
-                &quot;controlledVocabularies&quot;: [],
-                &quot;contexts&quot;: []
+                &quot;controlledVocabularies&quot;: []
             }
-        }
+        },
+        &quot;contexts&quot;: [
+            {
+                &quot;id&quot;: &quot;https://w3id.org/italia/onto/CLV/CLV-AP_IT.Identifier.issuedBy.Organization&quot;,
+                &quot;label&quot;: &quot;CLV-AP_IT.Identifier.issuedBy.Organization&quot;,
+                &quot;humanlabel&quot;: &quot;'rilasciato' da associato Identificativo.&quot;
+            }
+        ]
     }
 ]
 </code></pre>

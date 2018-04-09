@@ -62,6 +62,8 @@ http://dati.gov.it/onto/ann-voc/synonym
 http://dati.gov.it/onto/ann-voc/contextTriple
 http://dati.gov.it/onto/ann-voc/universeSignature
 http://dati.gov.it/onto/ann-voc/universeFingerprint
+http://dati.gov.it/onto/ann-voc/contextId
+http://dati.gov.it/onto/ann-voc/hasContext | d=entityhub:ref
 http://dati.gov.it/onto/ann-voc/isDomainOfUniverse | d=entityhub:ref
 http://dati.gov.it/onto/ann-voc/isRangeOfUniverse | d=entityhub:ref
 http://dati.gov.it/onto/ann-voc/universeDomain | d=entityhub:ref
