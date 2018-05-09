@@ -35,8 +35,10 @@ import org.apache.clerezza.rdf.core.access.EntityAlreadyExistsException;
 import org.apache.clerezza.rdf.core.access.TcManager;
 import org.apache.clerezza.rdf.ontologies.DC;
 import org.apache.clerezza.rdf.ontologies.RDFS;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.felix.scr.annotations.Component;
+import org.apache.felix.scr.annotations.Property;
 import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.Service;
 import org.apache.stanbol.commons.jobs.api.JobManager;
@@ -87,9 +89,15 @@ public class OntoNetHubImpl implements OntoNetHub {
 	public static final String INNER_INDEXER_EXECUTABLES = "executables" + File.separator + "indexing-genericrdf.jar";
 	public static final String DEFAULT_ONTOLOGIES_FOULDER = "default_ontologies";
 	
+	private static final String INXEX_DUMP_DOWNLOAD = "it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl.index.dump.download";
+	private static final boolean _INXEX_DUMP_DOWNLOAD_DEFAULT_ = true;
+	
 	private final Logger log = LoggerFactory.getLogger(getClass());
 	
 	private ComponentContext ctx;
+	
+	@Property(name=INXEX_DUMP_DOWNLOAD, boolValue=_INXEX_DUMP_DOWNLOAD_DEFAULT_)
+	private boolean indexDumpDownloadMode;
 	
 	@Reference
 	private OntoNetHubSiteManager siteManager;
@@ -135,9 +143,9 @@ public class OntoNetHubImpl implements OntoNetHub {
 		if(site == null){
 			IndexingJob job = null;
 			if(input.getOntologyId() == null)
-				job = new IndexingJob(sparqlQueryManager, siteManager, input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+				job = new IndexingJob(this.indexDumpDownloadMode, sparqlQueryManager, siteManager, input.getName(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
 			else 
-				job = new IndexingJob(sparqlQueryManager, siteManager, input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
+				job = new IndexingJob(this.indexDumpDownloadMode, sparqlQueryManager, siteManager, input.getOntologyId(), input.getDescription(), input.getBaseURI(), input.getData(), ctx.getBundleContext(), tcManager, ontologiesFolder);
 			String jid = jobManager.execute(job);
 			
 			return jid;
@@ -579,7 +587,6 @@ public class OntoNetHubImpl implements OntoNetHub {
 		
 		
 		
-		
 		Bundle bundle = ctx.getBundleContext().getBundle();
 		
 		URL wnEntryPath = bundle.getEntry("ontologies/wn.ttl");
@@ -599,6 +606,32 @@ public class OntoNetHubImpl implements OntoNetHub {
 					Constants.wordNetNamespace, 
 					wnModel);
 		}
+		
+		Boolean downloadIndexDump= (Boolean)(ctx.getProperties()).get(INXEX_DUMP_DOWNLOAD);
+    	if(downloadIndexDump  != null) this.indexDumpDownloadMode = downloadIndexDump.booleanValue();
+    	
+    	if(this.indexDumpDownloadMode){
+    		log.info("DUMP mode");
+    		File baseStanbolHome = new File(stanbolHome);
+    		InputStream is = bundle.getEntry("indexing/FULL-AP_IT.solrindex.zip").openStream();
+    		if(is != null){
+    			log.info("    found zip.");
+    			File indexingFolder = new File(baseStanbolHome, "ontonethub-indexing");
+    			File dest = new File(indexingFolder, "all");
+    			dest.mkdirs();
+    			File zipContent = new File(dest, "FULL-AP_IT.solrindex.zip");
+    			FileUtils.copyInputStreamToFile(is, zipContent);
+    		}
+    		is = bundle.getEntry("indexing/org.apache.stanbol.data.site.FULL-AP_IT-1.0.0.jar").openStream();
+    		if(is != null){
+    			log.info("    found jar.");
+    			File indexingFolder = new File(stanbolHome, "ontonethub-indexing");
+    			File dest = new File(indexingFolder, "all");
+    			dest.mkdirs();
+    			File jarContent = new File(dest, "org.apache.stanbol.data.site.FULL-AP_IT-1.0.0.jar");
+    			FileUtils.copyInputStreamToFile(is, jarContent);
+    		}
+    	}
 		
 		Enumeration<String> entryPaths = bundle.getEntryPaths("ontologies");
 		if(entryPaths != null){

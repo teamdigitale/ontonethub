@@ -8,9 +8,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntModel;
-import com.hp.hpl.jena.ontology.OntModelSpec;
 import com.hp.hpl.jena.ontology.OntProperty;
 import com.hp.hpl.jena.query.Query;
 import com.hp.hpl.jena.query.QueryExecution;
@@ -19,7 +21,6 @@ import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.query.Syntax;
-import com.hp.hpl.jena.rdf.model.ModelFactory;
 import com.hp.hpl.jena.rdf.model.Property;
 import com.hp.hpl.jena.rdf.model.RDFNode;
 import com.hp.hpl.jena.rdf.model.Resource;
@@ -32,6 +33,8 @@ import com.hp.hpl.jena.vocabulary.OWL2;
 public class OntologyContextFactory {
 	
 	private static int MAX_DEPTH = 4;
+	
+	private Logger log = LoggerFactory.getLogger(getClass());
 	
 	private List<String> serialize(int depth, OntClass ontClass, Map<OntClass,List<Statement>> graph, Set<OntClass> printed, StringBuilder sb, List<String> strings){
 		
@@ -66,11 +69,19 @@ public class OntologyContextFactory {
 		Map<String, Set<String>> propIndexMap = new HashMap<String, Set<String>>();
 		
 		ExtendedIterator<OntClass> ontClasses = ontModel.listClasses();
-		ontClasses.forEachRemaining(ontClass -> {
+		List<OntClass> classes = ontClasses.toList();
+		
+		int nClasses = classes.size();
+		
+		classes.parallelStream().forEach(ontClass -> {
+			//counter++;
+			log.info("Indexed {} classes out of {}.", ontClass, nClasses);
 			if(ontClass.isAnon()){
-				/* TODO */
+				
 			}
 			else {
+				
+				
 				Map<OntClass,List<Statement>> graph = new HashMap<OntClass,List<Statement>>();
 				graph.put(ontClass, new ArrayList<Statement>());
 				visit(ontClass, graph, new ArrayList<OntClass>());
@@ -93,31 +104,41 @@ public class OntologyContextFactory {
 			}
 		});
 		
+		/*
+		for(OntClass ontClass : classes) {
+			counter++;
+			log.info("Indexed {} classes out of {}.", counter, nClasses);
+			if(ontClass.isAnon()){
+				
+			}
+			else {
+				
+				
+				Map<OntClass,List<Statement>> graph = new HashMap<OntClass,List<Statement>>();
+				graph.put(ontClass, new ArrayList<Statement>());
+				visit(ontClass, graph, new ArrayList<OntClass>());
+				List<String> strings = new ArrayList<String>();
+				serialize(0, ontClass, graph, new HashSet<OntClass>(), new StringBuilder(), strings);
+				for(String string : strings){
+					String path = string;
+					int index = string.lastIndexOf(" . ");
+					string = string.substring(0, index);
+					index = string.lastIndexOf(" . ");
+					String prop = string.substring(index+2).trim();
+					
+					Set<String> paths = propIndexMap.get(prop);
+					if(paths == null){
+						paths = new HashSet<String>();
+						propIndexMap.put(prop, paths);
+					}
+					paths.add(path);
+				}
+			}
+		}
+	*/
+		
 		
 		return propIndexMap;
-		/*
-		for(String prop : propIndexMap.keySet()){
-			System.out.println(prop);
-			for(String path : propIndexMap.get(prop)){
-				System.out.println('\t' + path);
-			}
-		}
-		
-		
-		
-		/*
-		while(!resources.isEmpty()){
-			Resource c = resources.remove(0);
-			if(!c.equals(OWL2.Thing) && !visited.contains(c)){
-				System.out.println(c);	
-				visited.add(c);
-				resources.addAll(query(c, ontModel));
-			}
-			
-		}
-		*/
-		
-		
 		
 	}
 	

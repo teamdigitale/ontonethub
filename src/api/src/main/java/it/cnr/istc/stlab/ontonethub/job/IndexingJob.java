@@ -1,15 +1,5 @@
 package it.cnr.istc.stlab.ontonethub.job;
 
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ANNOTATION_PROPERTIES;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.DATATYPE_PROPERTIES;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_BUNDLE;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_ONTOLOGY_IRI;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.HAS_ONTOLOGY_SOURCE;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.IMPORTED_ONTOLOGIES;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.INDIVIDUALS;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OBJECT_PROPERTIES;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.ONTOLOGY;
-import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.OWL_CLASSES;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.domainUsage;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.rangeUsage;
 import static it.cnr.istc.stlab.ontonethub.OntologyDescriptionVocabulary.synonym;
@@ -33,17 +23,7 @@ import java.util.Set;
 
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 
-import org.apache.clerezza.commons.rdf.Graph;
-import org.apache.clerezza.commons.rdf.IRI;
-import org.apache.clerezza.commons.rdf.Language;
-import org.apache.clerezza.commons.rdf.RDFTerm;
-import org.apache.clerezza.commons.rdf.impl.utils.PlainLiteralImpl;
-import org.apache.clerezza.commons.rdf.impl.utils.TripleImpl;
-import org.apache.clerezza.commons.rdf.impl.utils.TypedLiteralImpl;
 import org.apache.clerezza.rdf.core.access.TcManager;
-import org.apache.clerezza.rdf.ontologies.DC;
-import org.apache.clerezza.rdf.ontologies.RDF;
-import org.apache.clerezza.rdf.ontologies.XSD;
 import org.apache.commons.io.FileUtils;
 import org.apache.stanbol.commons.jobs.api.JobResult;
 import org.apache.stanbol.commons.jobs.impl.JobManagerImpl;
@@ -55,17 +35,11 @@ import org.apache.stanbol.entityhub.servicesapi.query.FieldQuery;
 import org.apache.stanbol.entityhub.servicesapi.query.QueryResultList;
 import org.apache.stanbol.entityhub.servicesapi.query.SimilarityConstraint;
 import org.apache.stanbol.entityhub.servicesapi.site.Site;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.io.Files;
 import com.google.protobuf.TextFormat.ParseException;
-import com.hp.hpl.jena.ontology.AnnotationProperty;
-import com.hp.hpl.jena.ontology.DatatypeProperty;
-import com.hp.hpl.jena.ontology.Individual;
-import com.hp.hpl.jena.ontology.ObjectProperty;
 import com.hp.hpl.jena.ontology.OntClass;
 import com.hp.hpl.jena.ontology.OntModel;
 import com.hp.hpl.jena.ontology.OntModelSpec;
@@ -92,8 +66,6 @@ import com.hp.hpl.jena.rdf.model.impl.StatementImpl;
 import com.hp.hpl.jena.reasoner.Reasoner;
 import com.hp.hpl.jena.reasoner.rulesys.GenericRuleReasoner;
 import com.hp.hpl.jena.reasoner.rulesys.Rule;
-import com.hp.hpl.jena.util.iterator.ExtendedIterator;
-import com.hp.hpl.jena.util.iterator.Filter;
 import com.hp.hpl.jena.vocabulary.OWL2;
 import com.hp.hpl.jena.vocabulary.RDFS;
 
@@ -127,11 +99,14 @@ public class IndexingJob extends AbstractIndexingJob {
 	private OntoNetHubSiteManager siteManager;
 	private SPARQLQueryManager sparqlQueryManager;
 	
-	private String bundleNamePattern = "org.apache.stanbol.data.site.{$name}-1.0.0.jar";
-	private String zippedIndexNamePattern = "{$name}.solrindex.zip";
+	public static final String BUNDLE_NAME_PATTERN = "org.apache.stanbol.data.site.{$name}-1.0.0.jar";
+	public static final String ZIPPED_INDEX_NAME_PATTERN = "{$name}.solrindex.zip";
 	private File ontologiesFolder;
 	
-	public IndexingJob(SPARQLQueryManager sparqlQueryManager, OntoNetHubSiteManager siteManager, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+	private boolean useIndexDump;
+	
+	public IndexingJob(boolean useIndexDump, SPARQLQueryManager sparqlQueryManager, OntoNetHubSiteManager siteManager, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+		this.useIndexDump = useIndexDump;
 		this.sparqlQueryManager = sparqlQueryManager;
 		this.siteManager = siteManager;
 		this.ontologyName = ontologyName;
@@ -145,8 +120,8 @@ public class IndexingJob extends AbstractIndexingJob {
 		
 	}
 	
-	public IndexingJob(SPARQLQueryManager sparqlQueryManager, OntoNetHubSiteManager siteManager, String ontologyID, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
-		this(sparqlQueryManager, siteManager, ontologyName, ontologyDescription, baseURI, data, ctx, tcManager, ontologiesFolder);
+	public IndexingJob(boolean useIndexDump, SPARQLQueryManager sparqlQueryManager, OntoNetHubSiteManager siteManager, String ontologyID, String ontologyName, String ontologyDescription, String baseURI, Model data, BundleContext ctx, TcManager tcManager, File ontologiesFolder) {
+		this(useIndexDump, sparqlQueryManager, siteManager, ontologyName, ontologyDescription, baseURI, data, ctx, tcManager, ontologiesFolder);
 		this.ontologyID = ontologyID;
 	}
 
@@ -196,6 +171,19 @@ public class IndexingJob extends AbstractIndexingJob {
 				template.process(props, writer);
 				writer.close();
 				
+				if(useIndexDump){
+					File indexingFolder = new File(tempFolder, "indexing");
+					File distFolder = new File(indexingFolder, "dist");
+					
+					File srcZip = new File(stanbolHome + File.separator + "ontonethub-indexing" + File.separator + "all" + File.separator + "FULL-AP_IT.solrindex.zip");
+					File destZip = new File(distFolder, "FULL-AP_IT.solrindex.zip"); 
+					FileUtils.copyFile(srcZip, destZip);
+					
+					File srcJar = new File(stanbolHome + File.separator + "ontonethub-indexing" + File.separator + "all" + File.separator + "org.apache.stanbol.data.site.FULL-AP_IT-1.0.0.jar");
+					File destJar = new File(distFolder, "org.apache.stanbol.data.site.FULL-AP_IT-1.0.0.jar"); 
+					FileUtils.copyFile(srcJar, destJar);
+				}
+				
 				
 			} catch (ParseException e) {
 				log.error(e.getMessage(), e);
@@ -215,302 +203,104 @@ public class IndexingJob extends AbstractIndexingJob {
 			log.debug("Start indexing? {}", !error);
 			if(!error){
 				String jobId = JobManagerImpl.buildId(this);
-				
-				File rdfDataFolder = new File(tempFolder, "indexing" + File.separator + "resources" + File.separator + "rdfdata");
-				
-				String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
-				
-				OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
-				log.info("Base URI is {}", baseURI);
-				ontModel.read(baseURI);
-				
-				keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.label, ontModel);
-				keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.comment, ontModel);
-				
-				/*
-				 * Add synonyms gathered from WordNet.
-				 */
-				ontModel.add(getSynonyms(RDFS.label, ontModel));
-				/*
-				 * Add synonyms from super classes.
-				 */
-				ontModel.add(expandSubClasses(ontModel));
-				/*
-				 * Add synonyms from super classes.
-				 */
-				ontModel.add(expandSubProperties(ontModel));
-				
-				/*File ontologyFileName = new File(ontologiesFolder, ontologyName + "." + "rdf");
-				ontModel.write(new FileOutputStream(ontologyFileName), "RDF/XML");*/
-				
-				try{
-					log.debug("Running indexing subprocess {}", ontologyName);
-					
-					OntologyContextFactory ontologyContextFactory = new OntologyContextFactory();
-					Map<String, Set<String>> propContextMap = ontologyContextFactory.getContexts(ontModel);
-					IndexingModelFactory indexingModelFactory = new IndexingModelFactory(propContextMap);
-					
-					log.info("§§§§§ {} has a context map for {} properties", ontologyName, propContextMap.size());
-					
-					Model indexingModel = ModelFactory.createDefaultModel();
-					
-					ResultSet resultSet = sparqlQueryManager.executeSelect(ontModel);
-					while(resultSet.hasNext()){
-						QuerySolution querySolution = resultSet.next();
-						Resource domain = ontModel.getResource(querySolution.getResource("domain").getURI());
-						Property property = ontModel.getProperty(querySolution.getResource("property").getURI());
-						Resource range = ontModel.getResource(querySolution.getResource("range").getURI());
-						
-						indexingModel.add(indexingModelFactory.create(jobId, ontologyName, domain, property, range));
-						
-						
-						List<Statement> stmts = getDomainUsage(ModelFactory.createOntologyModel().createClass(domain.getURI()), ontModel);
-						
-						String domainAsRangeLocalname = domain.getLocalName();
-						for(Statement stmt : stmts){
-							Resource subj = stmt.getSubject();
-							Property pred = stmt.getPredicate();
-							
-							String domainLocalname = subj.getLocalName();
-							String propertyLocalname = pred.getLocalName(); 
-							String contextIdHex = null; 
-							try {
-								contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest((domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname).getBytes()));
-							} catch (NoSuchAlgorithmException e) {
-								contextIdHex = domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname;
-							}
-						}
-						indexingModel.add(stmts);
-						stmts = getRangeUsage(ModelFactory.createOntologyModel().createClass(range.getURI()), ontModel);
-						indexingModel.add(stmts);
-						
-						
-					}
-					
-					
-						
-					indexingModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
-				}catch(Exception e){
-					log.error(e.getMessage(), e);
+				IndexDeploymentManager indexDeploymentManager = new IndexDeploymentManager(baseURI, tcManager, ctx);
+				if(useIndexDump){
+					indexDeploymentManager.deploy(ontologyName, ontologyID, ontologyDescription, data, ontologiesFolder, tempFolder);
 				}
+				else{
 				
-				
-				
-				Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
-				indexingProcess.waitFor();
-				
-				String bundleFileName = bundleNamePattern.replace("{$name}", ontologyName);
-				File bundleFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  bundleFileName);
-				
-				String zippedIndexFileName = zippedIndexNamePattern.replace("{$name}", ontologyName);
-				File zippedIndexFile = new File(tempFolder, "indexing" + File.separator + "dist" + File.separator +  zippedIndexFileName);
-				
-				log.debug("bundleFile {}", bundleFile.getPath());
-				if(bundleFile.exists() && zippedIndexFile.exists()){
+					File rdfDataFolder = new File(tempFolder, "indexing" + File.separator + "resources" + File.separator + "rdfdata");
 					
-					File stanbolDatafiles = new File(stanbolHome + File.separator + "datafiles");
-					File deployedIndex = new File(stanbolDatafiles, zippedIndexFileName);
-					Files.copy(zippedIndexFile, deployedIndex);
+					String tempFileName = "_" + System.currentTimeMillis() + ".rdf";
+					
+					OntModel ontModel = ModelFactory.createOntologyModel(OntModelSpec.OWL_DL_MEM);
+					log.info("Base URI is {}", baseURI);
+					ontModel.read(baseURI);
+					log.info("Read ontology {}", baseURI);
+					
+					/*
+					keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.label, ontModel);
+					log.info("Max lenght labels");
+					keepMaxLengthAnnotationsOnly(com.hp.hpl.jena.vocabulary.RDFS.comment, ontModel);
+					log.info("Max lenght comments");
+					*/
+					
+					/*
+					 * Add synonyms gathered from WordNet.
+					 */
+					log.info("Adding synonyms");
+					ontModel.add(getSynonyms(RDFS.label, ontModel));
+					/*
+					 * Add synonyms from super classes.
+					 */
+					log.info("Adding synonyms from subclasses");
+					ontModel.add(expandSubClasses(ontModel));
+					/*
+					 * Add synonyms from super classes.
+					 */
+					log.info("Adding synonyms from subproperties");
+					ontModel.add(expandSubProperties(ontModel));
+					
+					/*File ontologyFileName = new File(ontologiesFolder, ontologyName + "." + "rdf");
+					ontModel.write(new FileOutputStream(ontologyFileName), "RDF/XML");*/
 					
 					try{
-						log.debug("Bundle URI: {} - URL: {}", bundleFile.toURI(), bundleFile.toURI().toURL());
-						Bundle bundle = ctx.installBundle(bundleFile.toURI().toString());
-						bundle.start();
-						long bundleId = bundle.getBundleId();
+						log.info("Running indexing subprocess {}", ontologyName);
 						
-						String ontId = null;
-						if(ontologyID != null) ontId = ontologyID;
-						else ontId = jobId;
+						OntologyContextFactory ontologyContextFactory = new OntologyContextFactory();
+						Map<String, Set<String>> propContextMap = ontologyContextFactory.getContexts(ontModel);
+						IndexingModelFactory indexingModelFactory = new IndexingModelFactory(propContextMap);
 						
-						IRI jobIRI = new IRI(ONTOLOGY + ontId);
+						log.info("§§§§§ {} has a context map for {} properties", ontologyName, propContextMap.size());
 						
-						Graph g = tcManager.getMGraph(new IRI("ontonethub-graph"));
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(HAS_BUNDLE),
-								new PlainLiteralImpl(String.valueOf(bundleId))));
+						Model indexingModel = ModelFactory.createDefaultModel();
 						
-						
-						/*
-						 * Ontology name
-						 */
-						g.add(new TripleImpl(
-								jobIRI,
-								org.apache.clerezza.rdf.ontologies.RDFS.label,
-								new PlainLiteralImpl(ontologyName)));
-						
-						/*
-						 * Ontology ID to use to identify the site withing the entityhub 
-						 */
-						g.add(new TripleImpl(
-								jobIRI,
-								DC.identifier,
-								new PlainLiteralImpl(ontologyName)));
-						
-						/*
-						 * Ontology description
-						 */
-						g.add(new TripleImpl(
-								jobIRI,
-								DC.description,
-								new PlainLiteralImpl(ontologyDescription)));
-						
-						/*
-						 * Store ontology file
-						 */
-						File ontologyFile = new File(ontologiesFolder, ontId + "."
-								+ "rdf");
-						data.write(new FileOutputStream(ontologyFile));
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(HAS_ONTOLOGY_SOURCE),
-								new IRI(ONTOLOGY + jobId + "/source")));
-						
-						log.debug("Writing ontology {} - {}", ontologyName, ontId);
-						/*
-						 * Ontology IRI
-						 */
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(HAS_ONTOLOGY_IRI),
-								new IRI(baseURI)));
-						
-						/*
-						 * Number of OWL classes
-						 */
-						
-						int classCounter = 0;
-						ExtendedIterator<OntClass> classesIt = ontModel.listClasses();
-						while(classesIt.hasNext()){
-							classesIt.next();
-							classCounter++;
-						}
-						
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(OWL_CLASSES),
-								new TypedLiteralImpl(String.valueOf(classCounter), XSD.int_)));
-						
-						/*
-						 * Object properties
-						 */
-						int objectProperties = 0;
-						ExtendedIterator<ObjectProperty> objPropertiesIt = ontModel.listObjectProperties();
-						while(objPropertiesIt.hasNext()) {
-							objPropertiesIt.next();
-							objectProperties++;
-						}
-						
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(OBJECT_PROPERTIES),
-								new TypedLiteralImpl(String.valueOf(objectProperties), XSD.int_)));
-						
-						/*
-						 * Datatype properties
-						 */
-						int dataProperties = 0;
-						ExtendedIterator<DatatypeProperty> dataPropertiesIt = ontModel.listDatatypeProperties();
-						while(dataPropertiesIt.hasNext()) {
-							dataPropertiesIt.next();
-							dataProperties++;
-						}
-						
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(DATATYPE_PROPERTIES),
-								new TypedLiteralImpl(String.valueOf(dataProperties), XSD.int_)));
-						
-						
-						/*
-						 * Annotation properties
-						 */
-						int annotationProperties = 0;
-						ExtendedIterator<AnnotationProperty> annotationPropertiesIt = ontModel.listAnnotationProperties();
-						while(annotationPropertiesIt.hasNext()) {
-							annotationPropertiesIt.next();
-							annotationProperties++;
-						}
-						
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(ANNOTATION_PROPERTIES),
-								new TypedLiteralImpl(String.valueOf(annotationProperties), XSD.int_)));
-						
-						
-						/*
-						 * OWL individuals
-						 */
-						int individuals = 0;
-						ExtendedIterator<Individual> individualsIt = ontModel.listIndividuals();
-						while(individualsIt.hasNext()) {
-							individualsIt.next();
-							individuals++;
-						}
-						
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(INDIVIDUALS),
-								new TypedLiteralImpl(String.valueOf(individuals), XSD.int_)));
-						
-						
-						/*
-						 * Closure of imported ontologies
-						 */
-						Set<String> importedOntologies = ontModel.listImportedOntologyURIs(true);
-						g.add(new TripleImpl(
-								jobIRI,
-								new IRI(IMPORTED_ONTOLOGIES),
-								new TypedLiteralImpl(String.valueOf(importedOntologies.size()), XSD.int_)));
-						
-						log.debug("Indexing job shoub be completed~");
-						
-						ontModel.listOntologies().forEachRemaining(ont -> {
-							ExtendedIterator<Statement> stmts = ont.listProperties().filterDrop(new Filter<Statement>() {
-								
-								@Override
-								public boolean accept(Statement o) {
-									return o.getPredicate().equals(RDF.type) ? true : false;
-								}
-							});
+						ResultSet resultSet = sparqlQueryManager.executeSelect(ontModel);
+						while(resultSet.hasNext()){
+							QuerySolution querySolution = resultSet.next();
+							Resource domain = ontModel.getResource(querySolution.getResource("domain").getURI());
+							Property property = ontModel.getProperty(querySolution.getResource("property").getURI());
+							Resource range = ontModel.getResource(querySolution.getResource("range").getURI());
 							
-							stmts.forEachRemaining(stmt -> {
-								try{
-									RDFNode objectNode = stmt.getObject();
-									RDFTerm objectTerm = null;
-									if(objectNode.isResource()) objectTerm = new IRI(((Resource)objectNode).getURI());
-									else{
-										Literal objectLiteral = (Literal)objectNode;
-										String lexicalForm = objectLiteral.getLexicalForm();
-										String type = objectLiteral.getDatatypeURI();
-										if(type != null) objectTerm = new TypedLiteralImpl(lexicalForm, new IRI(type));
-										else{
-											String language = objectLiteral.getLanguage();
-											if(language != null && !language.isEmpty()) objectTerm = new PlainLiteralImpl(lexicalForm, new Language(language));
-											else objectTerm = new PlainLiteralImpl(lexicalForm);
-										}
-									}
-									
-									g.add(new TripleImpl(
-											jobIRI,
-											new IRI(stmt.getPredicate().getURI()),
-											objectTerm));
-								} catch(Exception e){
-									log.info(e.getMessage(), e);
+							indexingModel.add(indexingModelFactory.create(jobId, ontologyName, domain, property, range));
+							
+							
+							List<Statement> stmts = getDomainUsage(ModelFactory.createOntologyModel().createClass(domain.getURI()), ontModel);
+							
+							String domainAsRangeLocalname = domain.getLocalName();
+							for(Statement stmt : stmts){
+								Resource subj = stmt.getSubject();
+								Property pred = stmt.getPredicate();
+								
+								String domainLocalname = subj.getLocalName();
+								String propertyLocalname = pred.getLocalName(); 
+								String contextIdHex = null; 
+								try {
+									contextIdHex = (new HexBinaryAdapter()).marshal(MessageDigest.getInstance("MD5").digest((domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname).getBytes()));
+								} catch (NoSuchAlgorithmException e) {
+									contextIdHex = domainLocalname + "." + propertyLocalname + "." + domainAsRangeLocalname;
 								}
-										
-							});
-						});
+							}
+							indexingModel.add(stmts);
+							stmts = getRangeUsage(ModelFactory.createOntologyModel().createClass(range.getURI()), ontModel);
+							indexingModel.add(stmts);
+							
+							
+						}
 						
 						
-					} catch(Exception e){
+							
+						indexingModel.write(new FileOutputStream(new File(rdfDataFolder, tempFileName)), "RDF/XML");
+					}catch(Exception e){
 						log.error(e.getMessage(), e);
 					}
 					
 					
 					
+					Process indexingProcess = Runtime.getRuntime().exec("java -jar "  + stanbolHome + File.separator + OntoNetHubImpl.RUNNABLE_INDEXER_EXECUTABLES + " index " + tempFolder.getPath());
+					indexingProcess.waitFor();
 					
-					
+					indexDeploymentManager.deploy(ontologyName, ontologyID, ontologyDescription, data, ontologiesFolder, tempFolder);
 				}
 				
 				String message = "Indexing of " + ontologyName + " completed.";
@@ -522,7 +312,7 @@ public class IndexingJob extends AbstractIndexingJob {
 			else indexingJobResult = new IndexingJobResult(errorMessage, false);
 			
 			if(tempFolder != null && tempFolder.exists()){
-				FileUtils.deleteDirectory(tempFolder);
+				//FileUtils.deleteDirectory(tempFolder);
 			}
 		} catch(Exception e){
 			log.error(e.getMessage(), e);

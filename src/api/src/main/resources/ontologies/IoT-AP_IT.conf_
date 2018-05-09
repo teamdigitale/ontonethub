@@ -1,0 +1,3 @@
+name=IoT-AP_IT
+description=This is the ontology used to represent IoT events. It can be used to model temporal series and measures of sensors of different type. Currently the ontology is specialized for modelling traffic flows.
+iri=https://w3id.org/italia/onto/IoT

@@ -1,0 +1,3 @@
+name=SM-AP_IT
+description=The ontology for Social Media. This ontology allows to represents social networks, account, email addresses, logos, etc.
+iri=https://w3id.org/italia/onto/SM

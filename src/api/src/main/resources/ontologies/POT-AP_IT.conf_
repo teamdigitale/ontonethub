@@ -1,0 +1,3 @@
+name=PrezziOfferteBiglietti
+description=This is the ontology of the Italian application profile for Prices-Offers-Tickets.
+iri=https://w3id.org/italia/onto/POT
