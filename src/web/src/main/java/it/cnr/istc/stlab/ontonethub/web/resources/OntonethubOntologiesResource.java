@@ -213,7 +213,8 @@ public class OntonethubOntologiesResource extends BaseStanbolResource {
         if(ldpath != null && !ldpath.isEmpty()) ldpathQuery += ldpath;
         	*/
         
-        String lemmatizedString = JerseyUtils.lemmatize(name) + "*";
+        //String lemmatizedString = JerseyUtils.lemmatize(name) + "*";
+        String lemmatizedString = JerseyUtils.lemmatize(name);
         log.debug("Searching {}", lemmatizedString);
         FieldQuery query = JerseyUtils.createFieldQueryForFindRequest(lemmatizedString, DEFAULT_SELECTED_FIELD, property, language,
             limit == null || limit < 1 ? DEFAULT_FIND_RESULT_LIMIT : limit, offset, ldpathQuery);

@@ -89,14 +89,14 @@ public class OntoNetHubImpl implements OntoNetHub {
 	public static final String INNER_INDEXER_EXECUTABLES = "executables" + File.separator + "indexing-genericrdf.jar";
 	public static final String DEFAULT_ONTOLOGIES_FOULDER = "default_ontologies";
 	
-	private static final String INXEX_DUMP_DOWNLOAD = "it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl.index.dump.download";
-	private static final boolean _INXEX_DUMP_DOWNLOAD_DEFAULT_ = true;
+	private static final String INDEX_DUMP_DOWNLOAD = "it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl.index.dump.download";
+	private static final boolean _INDEX_DUMP_DOWNLOAD_DEFAULT_ = false;
 	
 	private final Logger log = LoggerFactory.getLogger(getClass());
 	
 	private ComponentContext ctx;
 	
-	@Property(name=INXEX_DUMP_DOWNLOAD, boolValue=_INXEX_DUMP_DOWNLOAD_DEFAULT_)
+	@Property(name=INDEX_DUMP_DOWNLOAD, boolValue=_INDEX_DUMP_DOWNLOAD_DEFAULT_)
 	private boolean indexDumpDownloadMode;
 	
 	@Reference
@@ -607,7 +607,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 					wnModel);
 		}
 		
-		Boolean downloadIndexDump= (Boolean)(ctx.getProperties()).get(INXEX_DUMP_DOWNLOAD);
+		Boolean downloadIndexDump= (Boolean)(ctx.getProperties()).get(INDEX_DUMP_DOWNLOAD);
     	if(downloadIndexDump  != null) this.indexDumpDownloadMode = downloadIndexDump.booleanValue();
     	
     	if(this.indexDumpDownloadMode){

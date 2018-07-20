@@ -293,6 +293,7 @@ public class IndexingModelFactory {
 				
 				boolean foundDomainLabel = false;
 				
+				/*
 				for(Literal domainSyn : domainSynonyms){
 					String domainSynLang = domainSyn.getLanguage();
 					String domainSynValue = domainSyn.getLexicalForm();
@@ -312,12 +313,13 @@ public class IndexingModelFactory {
 								values.add(propDomainValue + " " + rangeSynValue);
 							}
 						}
-						*/
+						*
 						if(!foundRangeLabel)
 							values.add(propDomainValue);
 					}
 					
 				}
+				*/
 				if(!foundDomainLabel)
 					values.add(propSynValue);
 				

@@ -62,6 +62,9 @@
 			<extensions>true</extensions>
 			<configuration>
 				<instructions>
+					<Test-Suite>
+       					it.cnr.istc.stlab.ontonethub.test.SimpleTestSuite
+       				</Test-Suite>
 					<Embed-Dependency>
 						guava,
 						protobuf-java,
@@ -303,6 +306,15 @@
       <artifactId>xercesImpl</artifactId>
       <version>2.11.0</version>
     </dependency>
+    
+    <!-- https://mvnrepository.com/artifact/org.apache.felix/maven-junit4osgi-plugin -->
+	<dependency>
+    	<groupId>org.apache.felix</groupId>
+    	<artifactId>org.apache.felix.ipojo.junit4osgi</artifactId>
+    	<version>1.0.0</version>
+    	<scope>test</scope>
+	</dependency>
+    
 	
 	
 	
