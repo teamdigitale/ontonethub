@@ -90,7 +90,7 @@ public class OntoNetHubImpl implements OntoNetHub {
 	public static final String DEFAULT_ONTOLOGIES_FOULDER = "default_ontologies";
 	
 	private static final String INDEX_DUMP_DOWNLOAD = "it.cnr.istc.stlab.ontonethub.impl.OntoNetHubImpl.index.dump.download";
-	private static final boolean _INDEX_DUMP_DOWNLOAD_DEFAULT_ = false;
+	private static final boolean _INDEX_DUMP_DOWNLOAD_DEFAULT_ = true;
 	
 	private final Logger log = LoggerFactory.getLogger(getClass());
 	
